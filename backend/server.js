@@ -7,8 +7,8 @@ import tenantRoutes from './routes/tenantRoutes.js';
 import landlordRoutes from './routes/landlordRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 
-const admin = require('firebase-admin');
-const credentials = require('./config/rental-management-b8516-firebase-adminsdk-fbsvc-43726bc1eb.json');
+import admin from 'firebase-admin';
+import credentials from './config/rental-management-b8516-firebase-adminsdk-fbsvc-43726bc1eb.json' assert { type: "json" };
 
 dotenv.config();
 
