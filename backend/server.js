@@ -8,7 +8,9 @@ import landlordRoutes from './routes/landlordRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 
 import admin from 'firebase-admin';
-import credentials from './config/rental-management-b8516-firebase-adminsdk-fbsvc-43726bc1eb.json' assert { type: "json" };
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const credentials = require('./config/rental-management-b8516-firebase-adminsdk-fbsvc-43726bc1eb.json');
 
 dotenv.config();
 
