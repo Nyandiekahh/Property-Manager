@@ -247,7 +247,7 @@ REACT_APP_FIREBASE_APP_ID=your_app_id
 
 ## 👥 Contributors
 
-- **[Your Name]** - Frontend Developer
+- **Nyandieka** - Frontend Developer
 - **Daniela** - Backend Developer & Firebase Setup
 
 ## 📄 License
@@ -264,7 +264,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-For support, email [your-email@example.com] or create an issue in this repository.
+For support, create an issue in this repository.
 
 ## 🙏 Acknowledgments
 
