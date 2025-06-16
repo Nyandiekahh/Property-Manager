@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, User, Mail, Phone, MapPin, Calendar, DollarSign, Building2 } from 'lucide-react';
 
-const TenantModal = ({ tenant, onClose, onSave }) => {
+const TenantModal = ({ tenant, properties, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
-    property: '',
+    propertyId: '',
     unit: '',
     rentAmount: '',
     moveInDate: '',
@@ -17,22 +17,13 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
     occupation: ''
   });
 
-  // Mock properties for dropdown
-  const properties = [
-    'Sunset Apartments',
-    'Garden View Condos',
-    'City Center Plaza',
-    'Oceanview Heights',
-    'Mountain View'
-  ];
-
   useEffect(() => {
     if (tenant) {
       setFormData({
         name: tenant.name || '',
         email: tenant.email || '',
         phone: tenant.phone || '',
-        property: tenant.property || '',
+        propertyId: tenant.propertyId || '',
         unit: tenant.unit || '',
         rentAmount: tenant.rentAmount || '',
         moveInDate: tenant.moveInDate || '',
@@ -74,12 +65,12 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <div className="flex items-center justify-between p-6 border-b border-slate-200">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center">
                 <User className="w-5 h-5 text-white" />
               </div>
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="text-xl font-bold text-slate-900">
                 {tenant ? 'Edit Tenant' : 'Add New Tenant'}
               </h2>
             </div>
@@ -87,9 +78,9 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={onClose}
-              className="p-2 glass rounded-lg hover:bg-white/20 transition-colors"
+              className="p-2 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
             >
-              <X className="w-5 h-5 text-white" />
+              <X className="w-5 h-5 text-slate-600" />
             </motion.button>
           </div>
 
@@ -98,15 +89,15 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Personal Information */}
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Personal Information</h3>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Personal Information</h3>
                 
                 {/* Full Name */}
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
-                    Full Name
+                  <label className="block text-slate-700 text-sm font-medium mb-2">
+                    Full Name *
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
                     <input
                       type="text"
                       name="name"
@@ -121,11 +112,11 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
 
                 {/* Email */}
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
-                    Email Address
+                  <label className="block text-slate-700 text-sm font-medium mb-2">
+                    Email Address *
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
                     <input
                       type="email"
                       name="email"
@@ -140,11 +131,11 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
 
                 {/* Phone */}
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
-                    Phone Number
+                  <label className="block text-slate-700 text-sm font-medium mb-2">
+                    Phone Number *
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
                     <input
                       type="tel"
                       name="phone"
@@ -159,7 +150,7 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
 
                 {/* ID Number */}
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-slate-700 text-sm font-medium mb-2">
                     ID Number
                   </label>
                   <input
@@ -174,7 +165,7 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
 
                 {/* Occupation */}
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-slate-700 text-sm font-medium mb-2">
                     Occupation
                   </label>
                   <input
@@ -190,26 +181,26 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
 
               {/* Rental Information */}
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Rental Information</h3>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Rental Information</h3>
                 
                 {/* Property */}
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
-                    Property
+                  <label className="block text-slate-700 text-sm font-medium mb-2">
+                    Property *
                   </label>
                   <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
                     <select
-                      name="property"
-                      value={formData.property}
+                      name="propertyId"
+                      value={formData.propertyId}
                       onChange={handleChange}
                       className="input pl-10 appearance-none"
                       required
                     >
                       <option value="">Select property</option>
                       {properties.map(property => (
-                        <option key={property} value={property} className="bg-gray-800">
-                          {property}
+                        <option key={property.id} value={property.id}>
+                          {property.name}
                         </option>
                       ))}
                     </select>
@@ -218,11 +209,11 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
 
                 {/* Unit */}
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
-                    Unit Number
+                  <label className="block text-slate-700 text-sm font-medium mb-2">
+                    Unit Number *
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
                     <input
                       type="text"
                       name="unit"
@@ -237,11 +228,11 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
 
                 {/* Rent Amount */}
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
-                    Monthly Rent (KES)
+                  <label className="block text-slate-700 text-sm font-medium mb-2">
+                    Monthly Rent (KES) *
                   </label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
                     <input
                       type="number"
                       name="rentAmount"
@@ -257,11 +248,11 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
 
                 {/* Move-in Date */}
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
-                    Move-in Date
+                  <label className="block text-slate-700 text-sm font-medium mb-2">
+                    Move-in Date *
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
                     <input
                       type="date"
                       name="moveInDate"
@@ -275,7 +266,7 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
 
                 {/* Emergency Contact */}
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-slate-700 text-sm font-medium mb-2">
                     Emergency Contact Name
                   </label>
                   <input
@@ -290,7 +281,7 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
 
                 {/* Emergency Phone */}
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-slate-700 text-sm font-medium mb-2">
                     Emergency Contact Phone
                   </label>
                   <input
@@ -306,7 +297,7 @@ const TenantModal = ({ tenant, onClose, onSave }) => {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end space-x-4 pt-6 mt-6 border-t border-white/10">
+            <div className="flex items-center justify-end space-x-4 pt-6 mt-6 border-t border-slate-200">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}

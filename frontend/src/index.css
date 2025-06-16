@@ -3,21 +3,27 @@
 @tailwind utilities;
 
 /* Professional theme with proper text visibility */
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen;
+  }
+}
+
 @layer components {
   .glass {
-    @apply bg-white/95 backdrop-blur-lg border border-gray-200 rounded-xl shadow-lg;
+    @apply bg-white/90 backdrop-blur-lg border border-slate-200 rounded-xl shadow-lg;
   }
   
   .glass-strong {
-    @apply bg-white backdrop-blur-lg border border-gray-300 rounded-2xl shadow-xl;
+    @apply bg-white backdrop-blur-lg border border-slate-300 rounded-2xl shadow-xl;
   }
   
   .card {
-    @apply bg-white p-6 rounded-xl shadow-lg border border-gray-200;
+    @apply bg-white p-6 rounded-xl shadow-lg border border-slate-200 hover:shadow-xl transition-all duration-300;
   }
   
   .input {
-    @apply w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors;
+    @apply w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors;
   }
   
   .btn {
@@ -29,43 +35,48 @@
   }
   
   .btn-secondary {
-    @apply bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors;
+    @apply bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 transition-colors;
   }
   
   .text-gradient {
-    @apply text-gray-800 font-bold;
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-bold;
   }
   
   .bg-gradient-primary {
-    @apply bg-blue-600;
+    @apply bg-gradient-to-r from-blue-500 to-blue-600;
   }
   
   .bg-gradient-secondary {
-    @apply bg-gray-600;
+    @apply bg-gradient-to-r from-slate-500 to-slate-600;
   }
   
   .bg-gradient-success {
-    @apply bg-green-600;
+    @apply bg-gradient-to-r from-green-500 to-green-600;
   }
   
   .glow-primary {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
   }
   
   .spinner {
-    @apply w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin;
+    @apply w-4 h-4 border-2 border-slate-300 border-t-blue-600 rounded-full animate-spin;
   }
-}
 
-/* Fix text visibility issues */
-.text-white {
-  @apply text-gray-900;
-}
+  /* Sidebar specific styles */
+  .sidebar {
+    @apply bg-slate-900 border-r border-slate-700;
+  }
 
-.text-white\/60 {
-  @apply text-gray-600;
-}
+  .sidebar-link {
+    @apply text-slate-300 hover:text-white hover:bg-slate-800;
+  }
 
-.text-white\/80 {
-  @apply text-gray-700;
+  .sidebar-link.active {
+    @apply bg-blue-600 text-white;
+  }
+
+  /* Navbar styles */
+  .navbar {
+    @apply bg-white border-b border-slate-200 shadow-sm;
+  }
 }
