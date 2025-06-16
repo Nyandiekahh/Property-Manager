@@ -19,7 +19,7 @@ const PropertyModal = ({ property, onClose, onSave }) => {
         name: property.name || '',
         location: property.location || '',
         type: property.type || 'Apartment Complex',
-        units: property.units || '',
+        units: property.units || property.totalUnits || '',
         rentPerUnit: property.rentPerUnit || '',
         image: property.image || '',
         description: property.description || ''
@@ -66,12 +66,12 @@ const PropertyModal = ({ property, onClose, onSave }) => {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <div className="flex items-center justify-between p-6 border-b border-slate-200">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center">
                 <Building2 className="w-5 h-5 text-white" />
               </div>
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="text-xl font-bold text-slate-900">
                 {property ? 'Edit Property' : 'Add New Property'}
               </h2>
             </div>
@@ -79,9 +79,9 @@ const PropertyModal = ({ property, onClose, onSave }) => {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={onClose}
-              className="p-2 glass rounded-lg hover:bg-white/20 transition-colors"
+              className="p-2 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
             >
-              <X className="w-5 h-5 text-white" />
+              <X className="w-5 h-5 text-slate-600" />
             </motion.button>
           </div>
 
@@ -89,11 +89,11 @@ const PropertyModal = ({ property, onClose, onSave }) => {
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Property Name */}
             <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">
-                Property Name
+              <label className="block text-slate-700 text-sm font-medium mb-2">
+                Property Name *
               </label>
               <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+                <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
                 <input
                   type="text"
                   name="name"
@@ -108,11 +108,11 @@ const PropertyModal = ({ property, onClose, onSave }) => {
 
             {/* Location */}
             <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">
-                Location
+              <label className="block text-slate-700 text-sm font-medium mb-2">
+                Location *
               </label>
               <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
                 <input
                   type="text"
                   name="location"
@@ -128,11 +128,11 @@ const PropertyModal = ({ property, onClose, onSave }) => {
             {/* Property Type and Units */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-white/80 text-sm font-medium mb-2">
-                  Property Type
+                <label className="block text-slate-700 text-sm font-medium mb-2">
+                  Property Type *
                 </label>
                 <div className="relative">
-                  <Home className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+                  <Home className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
                   <select
                     name="type"
                     value={formData.type}
@@ -141,7 +141,7 @@ const PropertyModal = ({ property, onClose, onSave }) => {
                     required
                   >
                     {propertyTypes.map(type => (
-                      <option key={type} value={type} className="bg-gray-800">
+                      <option key={type} value={type}>
                         {type}
                       </option>
                     ))}
@@ -150,8 +150,8 @@ const PropertyModal = ({ property, onClose, onSave }) => {
               </div>
 
               <div>
-                <label className="block text-white/80 text-sm font-medium mb-2">
-                  Number of Units
+                <label className="block text-slate-700 text-sm font-medium mb-2">
+                  Number of Units *
                 </label>
                 <input
                   type="number"
@@ -168,11 +168,11 @@ const PropertyModal = ({ property, onClose, onSave }) => {
 
             {/* Rent per Unit */}
             <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">
+              <label className="block text-slate-700 text-sm font-medium mb-2">
                 Average Rent per Unit (KES)
               </label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
                 <input
                   type="number"
                   name="rentPerUnit"
@@ -187,7 +187,7 @@ const PropertyModal = ({ property, onClose, onSave }) => {
 
             {/* Property Image URL */}
             <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">
+              <label className="block text-slate-700 text-sm font-medium mb-2">
                 Property Image URL
               </label>
               <input
@@ -202,7 +202,7 @@ const PropertyModal = ({ property, onClose, onSave }) => {
 
             {/* Description */}
             <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">
+              <label className="block text-slate-700 text-sm font-medium mb-2">
                 Description
               </label>
               <textarea
@@ -216,7 +216,7 @@ const PropertyModal = ({ property, onClose, onSave }) => {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end space-x-4 pt-4 border-t border-white/10">
+            <div className="flex items-center justify-end space-x-4 pt-4 border-t border-slate-200">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}

@@ -1,31 +1,33 @@
-import api from './api';
+import { 
+  propertyService, 
+  tenantService, 
+  paymentService, 
+  analyticsService 
+} from './firestoreService';
 
 // Property Management
-export const getProperties = () => api.get('/landlord/properties');
-export const createProperty = (propertyData) => api.post('/landlord/properties', propertyData);
-export const updateProperty = (id, propertyData) => api.put(`/landlord/properties/${id}`, propertyData);
-export const deleteProperty = (id) => api.delete(`/landlord/properties/${id}`);
+export const getProperties = (landlordId) => propertyService.getProperties(landlordId);
+export const createProperty = (propertyData, landlordId) => propertyService.createProperty(propertyData, landlordId);
+export const updateProperty = (id, propertyData) => propertyService.updateProperty(id, propertyData);
+export const deleteProperty = (id) => propertyService.deleteProperty(id);
 
 // Tenant Management
-export const getTenants = (propertyId = null) => {
-  const url = propertyId ? `/landlord/tenants?propertyId=${propertyId}` : '/landlord/tenants';
-  return api.get(url);
-};
-export const createTenant = (tenantData) => api.post('/landlord/tenants', tenantData);
-export const updateTenant = (id, tenantData) => api.put(`/landlord/tenants/${id}`, tenantData);
-export const deleteTenant = (id) => api.delete(`/landlord/tenants/${id}`);
+export const getTenants = (landlordId, propertyId = null) => tenantService.getTenants(landlordId, propertyId);
+export const createTenant = (tenantData, landlordId) => tenantService.createTenant(tenantData, landlordId);
+export const updateTenant = (id, tenantData) => tenantService.updateTenant(id, tenantData);
+export const deleteTenant = (id) => tenantService.deleteTenant(id);
 
 // Payment Management
-export const getPayments = (filters = {}) => {
-  const params = new URLSearchParams(filters);
-  return api.get(`/payments?${params}`);
-};
-export const getPaymentHistory = (tenantId) => api.get(`/payments/history/${tenantId}`);
-
-// Email Notifications
-export const sendRentReminder = (tenantId, message) => 
-  api.post('/notifications/rent-reminder', { tenantId, message });
+export const getPayments = (landlordId, filters = {}) => paymentService.getPayments(landlordId, filters);
+export const getPaymentHistory = (tenantId) => paymentService.getPaymentHistory(tenantId);
 
 // Dashboard Analytics
-export const getDashboardData = () => api.get('/landlord/dashboard');
-export const getAnalytics = (period = 'month') => api.get(`/landlord/analytics?period=${period}`);
+export const getDashboardData = (landlordId) => analyticsService.getDashboardData(landlordId);
+
+// Email Notifications (to be implemented with Firebase Functions)
+export const sendRentReminder = async (tenantId, message) => {
+  // This will be implemented with Firebase Functions for sending emails
+  console.log('Sending rent reminder to tenant:', tenantId, message);
+  // For now, return a promise
+  return Promise.resolve({ success: true, message: 'Reminder sent' });
+};

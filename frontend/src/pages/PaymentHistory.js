@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   CreditCard, 
@@ -12,90 +12,60 @@ import {
   DollarSign,
   TrendingUp,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  X
 } from 'lucide-react';
-import { formatCurrency, formatDate, getPaymentStatusColor } from '../utils/helpers';
+import { useAuth } from '../context/AuthContext';
+import { paymentService, subscribeToPayments } from '../services/firestoreService';
+import { formatCurrency, formatDate } from '../utils/helpers';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const PaymentHistory = () => {
-  const [payments, setPayments] = useState([
-    {
-      id: 1,
-      tenant: 'John Doe',
-      property: 'Sunset Apartments',
-      unit: '#201',
-      amount: 25000,
-      date: '2024-06-14',
-      status: 'completed',
-      method: 'M-Pesa',
-      transactionId: 'MP240614001',
-      reference: 'RENT-JUN-2024'
-    },
-    {
-      id: 2,
-      tenant: 'Jane Smith',
-      property: 'Garden View Condos',
-      unit: '#105',
-      amount: 18000,
-      date: '2024-06-13',
-      status: 'completed',
-      method: 'M-Pesa',
-      transactionId: 'MP240613002',
-      reference: 'RENT-JUN-2024'
-    },
-    {
-      id: 3,
-      tenant: 'Sarah Wilson',
-      property: 'Oceanview Heights',
-      unit: '#404',
-      amount: 28000,
-      date: '2024-06-12',
-      status: 'completed',
-      method: 'M-Pesa',
-      transactionId: 'MP240612003',
-      reference: 'RENT-JUN-2024'
-    },
-    {
-      id: 4,
-      tenant: 'Mike Johnson',
-      property: 'City Center Plaza',
-      unit: '#302',
-      amount: 15000,
-      date: '2024-06-10',
-      status: 'completed',
-      method: 'M-Pesa',
-      transactionId: 'MP240610004',
-      reference: 'PARTIAL-JUN-2024'
-    },
-    {
-      id: 5,
-      tenant: 'David Brown',
-      property: 'Mountain View',
-      unit: '#201',
-      amount: 22000,
-      date: '2024-06-08',
-      status: 'completed',
-      method: 'M-Pesa',
-      transactionId: 'MP240608005',
-      reference: 'RENT-JUN-2024'
-    }
-  ]);
-
+  const { currentUser } = useAuth();
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPeriod, setFilterPeriod] = useState('all');
   const [selectedPayment, setSelectedPayment] = useState(null);
 
+  useEffect(() => {
+    loadPayments();
+
+    // Subscribe to real-time payment updates
+    const unsubscribe = subscribeToPayments(currentUser?.uid, (paymentsData) => {
+      setPayments(paymentsData);
+    });
+
+    return () => unsubscribe && unsubscribe();
+  }, [currentUser]);
+
+  const loadPayments = async () => {
+    if (!currentUser) return;
+    
+    try {
+      setLoading(true);
+      const data = await paymentService.getPayments(currentUser.uid);
+      setPayments(data);
+    } catch (error) {
+      console.error('Error loading payments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredPayments = payments.filter(payment => {
-    const matchesSearch = payment.tenant.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.property.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.transactionId.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = payment.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         payment.accountNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         payment.mpesaReceiptNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = filterStatus === 'all' || payment.status === filterStatus;
     
-    const paymentDate = new Date(payment.date);
+    const paymentDate = payment.createdAt?.seconds ? 
+      new Date(payment.createdAt.seconds * 1000) : new Date(payment.createdAt);
     const now = new Date();
-    const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
-    const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
+    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+    const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
     
     let matchesPeriod = true;
     if (filterPeriod === 'week') {
@@ -110,29 +80,45 @@ const PaymentHistory = () => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-400" />;
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'pending':
-        return <Clock className="w-4 h-4 text-yellow-400" />;
+        return <Clock className="w-4 h-4 text-yellow-500" />;
       case 'failed':
-        return <AlertCircle className="w-4 h-4 text-red-400" />;
+        return <AlertCircle className="w-4 h-4 text-red-500" />;
       default:
-        return <Clock className="w-4 h-4 text-gray-400" />;
+        return <Clock className="w-4 h-4 text-slate-400" />;
     }
   };
 
-  const totalAmount = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
+  const totalAmount = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
   const completedPayments = filteredPayments.filter(p => p.status === 'completed').length;
   const pendingPayments = filteredPayments.filter(p => p.status === 'pending').length;
 
-  // Mock analytics data
-  const analytics = {
-    thisMonth: 245000,
-    lastMonth: 220000,
-    avgPaymentTime: 2.5,
-    successRate: 96.2
-  };
+  // Calculate analytics
+  const thisMonth = new Date();
+  const lastMonth = new Date(thisMonth.getFullYear(), thisMonth.getMonth() - 1, 1);
+  const firstDayOfThisMonth = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
 
-  const growthRate = ((analytics.thisMonth - analytics.lastMonth) / analytics.lastMonth * 100).toFixed(1);
+  const thisMonthPayments = payments.filter(p => {
+    const paymentDate = p.createdAt?.seconds ? 
+      new Date(p.createdAt.seconds * 1000) : new Date(p.createdAt);
+    return paymentDate >= firstDayOfThisMonth && p.status === 'completed';
+  });
+
+  const lastMonthPayments = payments.filter(p => {
+    const paymentDate = p.createdAt?.seconds ? 
+      new Date(p.createdAt.seconds * 1000) : new Date(p.createdAt);
+    return paymentDate >= lastMonth && paymentDate < firstDayOfThisMonth && p.status === 'completed';
+  });
+
+  const thisMonthTotal = thisMonthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const lastMonthTotal = lastMonthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const growthRate = lastMonthTotal > 0 ? ((thisMonthTotal - lastMonthTotal) / lastMonthTotal * 100).toFixed(1) : 0;
+  const successRate = payments.length > 0 ? ((completedPayments / payments.length) * 100).toFixed(1) : 0;
+
+  if (loading) {
+    return <LoadingSpinner text="Loading payment history..." />;
+  }
 
   return (
     <motion.div
@@ -149,8 +135,8 @@ const PaymentHistory = () => {
         className="flex flex-col md:flex-row md:items-center md:justify-between"
       >
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Payment History</h1>
-          <p className="text-white/60">Track all rent payments and transactions</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Payment History</h1>
+          <p className="text-slate-600">Track all rent payments and transactions</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.05 }}
@@ -167,11 +153,11 @@ const PaymentHistory = () => {
         {[
           { 
             label: 'This Month', 
-            value: formatCurrency(analytics.thisMonth), 
+            value: formatCurrency(thisMonthTotal), 
             icon: DollarSign, 
             color: 'from-green-500 to-emerald-500',
-            change: `+${growthRate}%`,
-            isPositive: true
+            change: `${growthRate > 0 ? '+' : ''}${growthRate}%`,
+            isPositive: parseFloat(growthRate) >= 0
           },
           { 
             label: 'Total Payments', 
@@ -183,19 +169,19 @@ const PaymentHistory = () => {
           },
           { 
             label: 'Success Rate', 
-            value: `${analytics.successRate}%`, 
+            value: `${successRate}%`, 
             icon: TrendingUp, 
             color: 'from-purple-500 to-pink-500',
-            change: '+2.1% vs last month',
+            change: 'All time average',
             isPositive: true
           },
           { 
-            label: 'Avg Payment Time', 
-            value: `${analytics.avgPaymentTime} days`, 
+            label: 'Pending', 
+            value: pendingPayments, 
             icon: Clock, 
             color: 'from-orange-500 to-red-500',
-            change: '-0.5 days improved',
-            isPositive: true
+            change: 'Awaiting completion',
+            isPositive: false
           }
         ].map((stat, index) => {
           const Icon = stat.icon;
@@ -212,19 +198,17 @@ const PaymentHistory = () => {
                   <Icon className="w-5 h-5 text-white" />
                 </div>
                 <div className={`flex items-center text-xs font-medium ${
-                  stat.isPositive ? 'text-green-400' : 'text-red-400'
+                  stat.isPositive ? 'text-green-600' : 'text-slate-500'
                 }`}>
-                  {stat.isPositive ? (
+                  {stat.isPositive && parseFloat(stat.change) !== 0 ? (
                     <ArrowUpRight className="w-3 h-3 mr-1" />
-                  ) : (
-                    <ArrowDownRight className="w-3 h-3 mr-1" />
-                  )}
+                  ) : null}
                   {stat.change}
                 </div>
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{stat.value}</p>
-                <p className="text-white/60 text-sm">{stat.label}</p>
+                <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+                <p className="text-slate-600 text-sm">{stat.label}</p>
               </div>
             </motion.div>
           );
@@ -239,7 +223,7 @@ const PaymentHistory = () => {
         className="flex flex-col md:flex-row gap-4"
       >
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
           <input
             type="text"
             placeholder="Search payments..."
@@ -276,75 +260,88 @@ const PaymentHistory = () => {
         transition={{ delay: 0.4 }}
         className="card overflow-hidden"
       >
-        <div className="p-6 border-b border-white/10">
-          <h2 className="text-xl font-bold text-white">Recent Payments</h2>
-          <p className="text-white/60 text-sm mt-1">
+        <div className="p-6 border-b border-slate-200">
+          <h2 className="text-xl font-bold text-slate-900">Recent Payments</h2>
+          <p className="text-slate-600 text-sm mt-1">
             Showing {filteredPayments.length} payments
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-white/5">
-              <tr>
-                <th className="text-left p-4 text-white/80 font-medium">Tenant</th>
-                <th className="text-left p-4 text-white/80 font-medium">Property</th>
-                <th className="text-left p-4 text-white/80 font-medium">Amount</th>
-                <th className="text-left p-4 text-white/80 font-medium">Date</th>
-                <th className="text-left p-4 text-white/80 font-medium">Status</th>
-                <th className="text-left p-4 text-white/80 font-medium">Transaction ID</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPayments.map((payment, index) => (
-                <motion.tr
-                  key={payment.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 + index * 0.05 }}
-                  className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
-                  onClick={() => setSelectedPayment(payment)}
-                >
-                  <td className="p-4">
-                    <div>
-                      <p className="text-white font-medium">{payment.tenant}</p>
-                      <p className="text-white/60 text-sm">{payment.unit}</p>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <p className="text-white">{payment.property}</p>
-                  </td>
-                  <td className="p-4">
-                    <p className="text-white font-semibold">{formatCurrency(payment.amount)}</p>
-                  </td>
-                  <td className="p-4">
-                    <p className="text-white">{formatDate(payment.date)}</p>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center space-x-2">
-                      {getStatusIcon(payment.status)}
-                      <span className={`text-sm font-medium capitalize ${
-                        payment.status === 'completed' ? 'text-green-400' :
-                        payment.status === 'pending' ? 'text-yellow-400' :
-                        'text-red-400'
-                      }`}>
-                        {payment.status}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <p className="text-white/80 font-mono text-sm">{payment.transactionId}</p>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredPayments.length === 0 && (
+        {filteredPayments.length === 0 ? (
           <div className="p-12 text-center">
-            <CreditCard className="w-12 h-12 text-white/30 mx-auto mb-4" />
-            <p className="text-white/60">No payments found matching your criteria</p>
+            <CreditCard className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500">No payments found matching your criteria</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="text-left p-4 text-slate-700 font-medium">Description</th>
+                  <th className="text-left p-4 text-slate-700 font-medium">Account</th>
+                  <th className="text-left p-4 text-slate-700 font-medium">Amount</th>
+                  <th className="text-left p-4 text-slate-700 font-medium">Date</th>
+                  <th className="text-left p-4 text-slate-700 font-medium">Status</th>
+                  <th className="text-left p-4 text-slate-700 font-medium">Receipt</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPayments.map((payment, index) => (
+                  <motion.tr
+                    key={payment.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 + index * 0.05 }}
+                    className="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
+                    onClick={() => setSelectedPayment(payment)}
+                  >
+                    <td className="p-4">
+                      <div>
+                        <p className="text-slate-900 font-medium">
+                          {payment.description || 'Rent Payment'}
+                        </p>
+                        <p className="text-slate-500 text-sm">{payment.method || 'M-Pesa'}</p>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <p className="text-slate-900 font-mono text-sm">
+                        {payment.accountNumber || '-'}
+                      </p>
+                    </td>
+                    <td className="p-4">
+                      <p className="text-slate-900 font-semibold">
+                        {formatCurrency(payment.amount || 0)}
+                      </p>
+                    </td>
+                    <td className="p-4">
+                      <p className="text-slate-900">
+                        {payment.createdAt?.seconds ? 
+                          formatDate(new Date(payment.createdAt.seconds * 1000)) :
+                          formatDate(new Date(payment.createdAt || new Date()))
+                        }
+                      </p>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center space-x-2">
+                        {getStatusIcon(payment.status)}
+                        <span className={`text-sm font-medium capitalize ${
+                          payment.status === 'completed' ? 'text-green-500' :
+                          payment.status === 'pending' ? 'text-yellow-500' :
+                          'text-red-500'
+                        }`}>
+                          {payment.status || 'pending'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <p className="text-slate-600 font-mono text-sm">
+                        {payment.mpesaReceiptNumber || '-'}
+                      </p>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </motion.div>
@@ -366,45 +363,64 @@ const PaymentHistory = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
-              <h3 className="text-xl font-bold text-white mb-4">Payment Details</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-slate-900">Payment Details</h3>
+                <button
+                  onClick={() => setSelectedPayment(null)}
+                  className="p-2 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                >
+                  <X className="w-4 h-4 text-slate-600" />
+                </button>
+              </div>
               
               <div className="space-y-4">
                 <div className="flex justify-between">
-                  <span className="text-white/60">Tenant:</span>
-                  <span className="text-white">{selectedPayment.tenant}</span>
+                  <span className="text-slate-600">Description:</span>
+                  <span className="text-slate-900 font-medium">
+                    {selectedPayment.description || 'Rent Payment'}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Property:</span>
-                  <span className="text-white">{selectedPayment.property} {selectedPayment.unit}</span>
+                  <span className="text-slate-600">Account:</span>
+                  <span className="text-slate-900 font-mono text-sm">
+                    {selectedPayment.accountNumber}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Amount:</span>
-                  <span className="text-white font-semibold">{formatCurrency(selectedPayment.amount)}</span>
+                  <span className="text-slate-600">Amount:</span>
+                  <span className="text-slate-900 font-semibold">
+                    {formatCurrency(selectedPayment.amount)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Date:</span>
-                  <span className="text-white">{formatDate(selectedPayment.date)}</span>
+                  <span className="text-slate-600">Date:</span>
+                  <span className="text-slate-900">
+                    {selectedPayment.createdAt?.seconds ? 
+                      formatDate(new Date(selectedPayment.createdAt.seconds * 1000)) :
+                      formatDate(new Date(selectedPayment.createdAt))
+                    }
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Method:</span>
-                  <span className="text-white">{selectedPayment.method}</span>
+                  <span className="text-slate-600">Method:</span>
+                  <span className="text-slate-900">{selectedPayment.method || 'M-Pesa'}</span>
                 </div>
+                {selectedPayment.mpesaReceiptNumber && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Receipt:</span>
+                    <span className="text-slate-900 font-mono text-sm">
+                      {selectedPayment.mpesaReceiptNumber}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
-                  <span className="text-white/60">Transaction ID:</span>
-                  <span className="text-white font-mono text-sm">{selectedPayment.transactionId}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">Reference:</span>
-                  <span className="text-white">{selectedPayment.reference}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">Status:</span>
+                  <span className="text-slate-600">Status:</span>
                   <div className="flex items-center space-x-2">
                     {getStatusIcon(selectedPayment.status)}
                     <span className={`text-sm font-medium capitalize ${
-                      selectedPayment.status === 'completed' ? 'text-green-400' :
-                      selectedPayment.status === 'pending' ? 'text-yellow-400' :
-                      'text-red-400'
+                      selectedPayment.status === 'completed' ? 'text-green-500' :
+                      selectedPayment.status === 'pending' ? 'text-yellow-500' :
+                      'text-red-500'
                     }`}>
                       {selectedPayment.status}
                     </span>
