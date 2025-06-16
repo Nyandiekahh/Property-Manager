@@ -2,10 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom components for professional white theme */
+/* Professional theme with proper text visibility */
 @layer components {
   .glass {
-    @apply bg-white/90 backdrop-blur-lg border border-gray-200 rounded-xl shadow-lg;
+    @apply bg-white/95 backdrop-blur-lg border border-gray-200 rounded-xl shadow-lg;
   }
   
   .glass-strong {
@@ -13,7 +13,7 @@
   }
   
   .card {
-    @apply glass p-6;
+    @apply bg-white p-6 rounded-xl shadow-lg border border-gray-200;
   }
   
   .input {
@@ -55,4 +55,17 @@
   .spinner {
     @apply w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin;
   }
+}
+
+/* Fix text visibility issues */
+.text-white {
+  @apply text-gray-900;
+}
+
+.text-white\/60 {
+  @apply text-gray-600;
+}
+
+.text-white\/80 {
+  @apply text-gray-700;
 }
