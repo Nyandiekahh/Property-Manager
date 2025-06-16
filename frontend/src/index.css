@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+/* Custom components that your Login.js is using */
+@layer components {
+  .glass-strong {
+    @apply bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl shadow-2xl;
+  }
+  
+  .input {
+    @apply w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm;
+  }
+  
+  .btn {
+    @apply px-6 py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl;
+  }
+  
+  .spinner {
+    @apply w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin;
+  }
+}
