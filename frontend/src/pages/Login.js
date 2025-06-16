@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, Zap, Building2, TrendingUp, Shield } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Building2, TrendingUp, Shield, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -39,50 +39,45 @@ const Login = () => {
     {
       icon: Building2,
       title: 'Property Management',
-      description: 'Manage multiple properties with ease'
+      description: 'Comprehensive property portfolio management'
     },
     {
       icon: TrendingUp,
-      title: 'Real-time Analytics',
-      description: 'Track payments and property performance'
+      title: 'Financial Analytics',
+      description: 'Real-time insights and reporting'
     },
     {
       icon: Shield,
-      title: 'Secure Payments',
-      description: 'M-Pesa integration for seamless transactions'
+      title: 'Secure Platform',
+      description: 'Enterprise-grade security and compliance'
+    },
+    {
+      icon: Users,
+      title: 'Tenant Management',
+      description: 'Streamlined tenant relationship management'
     }
   ];
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
       {/* Left Side - Features */}
       <motion.div
         initial={{ x: -100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.8 }}
-        className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-12 flex-col justify-center relative overflow-hidden"
+        className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-blue-800 p-12 flex-col justify-center relative overflow-hidden"
       >
-        {/* Background Animation */}
-        <div className="absolute inset-0">
-          {[...Array(50)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-2 h-2 bg-white/20 rounded-full"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-              }}
-              animate={{
-                y: [0, -20, 0],
-                opacity: [0.2, 0.8, 0.2],
-              }}
-              transition={{
-                duration: 2 + Math.random() * 2,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
-            />
-          ))}
+        {/* Professional Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 2px,
+              rgba(255,255,255,0.1) 2px,
+              rgba(255,255,255,0.1) 4px
+            )`
+          }} />
         </div>
 
         <div className="relative z-10">
@@ -92,21 +87,21 @@ const Login = () => {
             transition={{ delay: 0.3 }}
             className="mb-12"
           >
-            <div className="flex items-center space-x-3 mb-6">
+            <div className="flex items-center space-x-3 mb-8">
               <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <Zap className="w-7 h-7 text-white" />
+                <Building2 className="w-7 h-7 text-white" />
               </div>
-              <h1 className="text-3xl font-bold text-white">RentFlow</h1>
+              <h1 className="text-3xl font-bold text-white">PropertyFlow</h1>
             </div>
-            <h2 className="text-4xl font-bold text-white mb-4">
-              The Future of Property Management
+            <h2 className="text-4xl font-bold text-white mb-4 leading-tight">
+              Professional Property Management Platform
             </h2>
-            <p className="text-xl text-white/80">
-              Streamline your rental business with cutting-edge technology
+            <p className="text-xl text-blue-100">
+              Streamline operations, maximize returns, enhance tenant satisfaction
             </p>
           </motion.div>
 
-          <div className="space-y-8">
+          <div className="grid grid-cols-1 gap-6">
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
@@ -115,16 +110,16 @@ const Login = () => {
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.5 + index * 0.2 }}
-                  className="flex items-start space-x-4"
+                  className="flex items-start space-x-4 p-4 bg-white/10 rounded-xl backdrop-blur-sm"
                 >
-                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                    <Icon className="w-6 h-6 text-white" />
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Icon className="w-5 h-5 text-white" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-1">
                       {feature.title}
                     </h3>
-                    <p className="text-white/70">{feature.description}</p>
+                    <p className="text-blue-100 text-sm">{feature.description}</p>
                   </div>
                 </motion.div>
               );
@@ -134,27 +129,27 @@ const Login = () => {
       </motion.div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <motion.div
           initial={{ x: 100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.8 }}
           className="w-full max-w-md"
         >
-          <div className="glass-strong p-8">
+          <div className="glass-strong p-8 border-2">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
               className="text-center mb-8"
             >
-              <h2 className="text-3xl font-bold text-white mb-2">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
                 {isSignUp ? 'Create Account' : 'Welcome Back'}
               </h2>
-              <p className="text-white/60">
+              <p className="text-gray-600">
                 {isSignUp 
-                  ? 'Join the future of property management' 
-                  : 'Sign in to your landlord dashboard'
+                  ? 'Join thousands of property managers' 
+                  : 'Sign in to your dashboard'
                 }
               </p>
             </motion.div>
@@ -165,11 +160,11 @@ const Login = () => {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.4 }}
               >
-                <label className="block text-white/80 text-sm font-medium mb-2">
+                <label className="block text-gray-700 text-sm font-medium mb-2">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="email"
                     value={email}
@@ -186,11 +181,11 @@ const Login = () => {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.5 }}
               >
-                <label className="block text-white/80 text-sm font-medium mb-2">
+                <label className="block text-gray-700 text-sm font-medium mb-2">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
@@ -202,7 +197,7 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -236,12 +231,12 @@ const Login = () => {
               transition={{ delay: 0.7 }}
               className="mt-8 text-center"
             >
-              <p className="text-white/60">
+              <p className="text-gray-600">
                 {isSignUp ? 'Already have an account?' : "Don't have an account?"}
               </p>
               <button
                 onClick={() => setIsSignUp(!isSignUp)}
-                className="text-white hover:text-white/80 font-medium mt-1 transition-colors"
+                className="text-blue-600 hover:text-blue-700 font-medium mt-1 transition-colors"
               >
                 {isSignUp ? 'Sign In' : 'Create Account'}
               </button>
