@@ -1,9 +1,16 @@
 import express from 'express';
-import { initiatePayment, handleCallback, handleTimeout } from '../controllers/paymentController.js';
+import { 
+  initiatePayment, 
+  handleCallback, 
+  handleTimeout,
+  simulatePayment,
+  getTenantBalance,
+  generateReminders,
+  testPaymentScenarios
+} from '../controllers/paymentController.js';
 import mpesaService from '../services/mpesaService.js';
 import { db } from '../config/firebaseClient.js';
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { paymentService } from '../services/firestoreService.js';
 
 const router = express.Router();
 
@@ -12,7 +19,15 @@ router.post('/initiate', initiatePayment);
 router.post('/callback', handleCallback);
 router.post('/timeout', handleTimeout);
 
-// Test OAuth credentials
+// Enhanced simulation route (replaces old simulate-payment)
+router.post('/simulate-payment', simulatePayment);
+
+// New smart payment routes
+router.get('/tenant/:tenantId/balance', getTenantBalance);
+router.get('/reminders/:landlordId', generateReminders);
+router.post('/test-scenarios', testPaymentScenarios);
+
+// Testing routes (keep existing for compatibility)
 router.get('/test-oauth', async (req, res) => {
   try {
     console.log('Testing M-Pesa OAuth...');
@@ -59,6 +74,53 @@ router.post('/test-payment', async (req, res) => {
   }
 });
 
+// Get all tenants for testing (shows account numbers)
+router.get('/test-tenants', async (req, res) => {
+  try {
+    const { landlordId } = req.query;
+    
+    if (!landlordId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide landlordId as query parameter'
+      });
+    }
+
+    const tenantsQuery = query(
+      collection(db, 'tenants'),
+      where('landlordId', '==', landlordId)
+    );
+    
+    const snapshot = await getDocs(tenantsQuery);
+    const tenants = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name,
+        accountNumber: data.accountNumber,
+        rentAmount: data.rentAmount,
+        paymentStatus: data.paymentStatus,
+        accountBalance: data.accountBalance || 0,
+        phone: data.phone
+      };
+    });
+
+    res.json({
+      success: true,
+      message: `Found ${tenants.length} tenants`,
+      tenants: tenants,
+      instructions: 'Use any accountNumber from above to test payment'
+    });
+
+  } catch (error) {
+    console.error('Error fetching tenants:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Mock successful payment for dashboard testing
 router.post('/mock-success', async (req, res) => {
   try {
@@ -91,127 +153,7 @@ router.post('/mock-success', async (req, res) => {
   }
 });
 
-// Get all tenants for testing (shows account numbers)
-router.get('/test-tenants', async (req, res) => {
-  try {
-    const { landlordId } = req.query;
-    
-    if (!landlordId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Please provide landlordId as query parameter'
-      });
-    }
-
-    const tenantsQuery = query(
-      collection(db, 'tenants'),
-      where('landlordId', '==', landlordId)
-    );
-    
-    const snapshot = await getDocs(tenantsQuery);
-    const tenants = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: data.name,
-        accountNumber: data.accountNumber,
-        rentAmount: data.rentAmount,
-        paymentStatus: data.paymentStatus,
-        phone: data.phone
-      };
-    });
-
-    res.json({
-      success: true,
-      message: `Found ${tenants.length} tenants`,
-      tenants: tenants,
-      instructions: 'Use any accountNumber from above to test payment'
-    });
-
-  } catch (error) {
-    console.error('Error fetching tenants:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Simulate payment for any tenant account
-router.post('/simulate-payment', async (req, res) => {
-  try {
-    const { accountNumber, amount, phoneNumber } = req.body;
-    
-    if (!accountNumber) {
-      return res.status(400).json({
-        success: false,
-        error: 'accountNumber is required'
-      });
-    }
-
-    // Find the tenant by account number
-    const tenantsQuery = query(
-      collection(db, 'tenants'),
-      where('accountNumber', '==', accountNumber)
-    );
-    
-    const tenantSnapshot = await getDocs(tenantsQuery);
-    
-    if (tenantSnapshot.empty) {
-      return res.status(404).json({
-        success: false,
-        error: `No tenant found with account number: ${accountNumber}`
-      });
-    }
-
-    const tenantDoc = tenantSnapshot.docs[0];
-    const tenant = { id: tenantDoc.id, ...tenantDoc.data() };
-
-    // Use tenant's actual data
-    const paymentAmount = amount || tenant.rentAmount;
-    const payerPhone = phoneNumber || tenant.phone || '254708374149';
-
-    // Create realistic payment data
-    const paymentData = {
-      landlordId: tenant.landlordId,
-      tenantId: tenant.id,
-      propertyId: tenant.propertyId,
-      amount: parseFloat(paymentAmount),
-      phoneNumber: payerPhone,
-      accountNumber: accountNumber,
-      method: 'M-Pesa',
-      status: 'completed',
-      mpesaReceiptNumber: 'RK' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-      description: `Rent payment for ${tenant.name}`,
-      createdAt: new Date()
-    };
-
-    // Record the payment using your service
-    const paymentId = await paymentService.recordPayment(paymentData);
-
-    res.json({
-      success: true,
-      message: 'Payment simulated and recorded successfully',
-      paymentId: paymentId,
-      tenant: {
-        name: tenant.name,
-        accountNumber: tenant.accountNumber,
-        previousStatus: tenant.paymentStatus
-      },
-      payment: paymentData,
-      instructions: 'Check your dashboard - payment should appear and tenant status should update'
-    });
-
-  } catch (error) {
-    console.error('Payment simulation failed:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Test the complete callback flow
+// Test complete callback flow
 router.post('/test-callback-flow', async (req, res) => {
   try {
     const { accountNumber } = req.body;
