@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, Building2, TrendingUp, Shield, Users } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Building2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -35,214 +34,200 @@ const Login = () => {
     }
   };
 
-  const features = [
-    {
-      icon: Building2,
-      title: 'Property Management',
-      description: 'Comprehensive property portfolio management'
-    },
-    {
-      icon: TrendingUp,
-      title: 'Financial Analytics',
-      description: 'Real-time insights and reporting'
-    },
-    {
-      icon: Shield,
-      title: 'Secure Platform',
-      description: 'Enterprise-grade security and compliance'
-    },
-    {
-      icon: Users,
-      title: 'Tenant Management',
-      description: 'Streamlined tenant relationship management'
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
-      {/* Left Side - Features */}
-      <motion.div
-        initial={{ x: -100, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.8 }}
-        className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-blue-800 p-12 flex-col justify-center relative overflow-hidden"
-      >
-        {/* Professional Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `repeating-linear-gradient(
-              45deg,
-              transparent,
-              transparent 2px,
-              rgba(255,255,255,0.1) 2px,
-              rgba(255,255,255,0.1) 4px
-            )`
-          }} />
-        </div>
-
-        <div className="relative z-10">
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="mb-12"
-          >
-            <div className="flex items-center space-x-3 mb-8">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <Building2 className="w-7 h-7 text-white" />
+    <div className="min-h-screen bg-white flex">
+      
+      {/* Left Side - Brand & Info */}
+      <div className="hidden lg:block lg:w-1/2 bg-slate-900 p-16">
+        <div className="h-full flex flex-col justify-between">
+          
+          {/* Logo & Brand */}
+          <div>
+            <div className="flex items-center mb-12">
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+                <Building2 className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-3xl font-bold text-white">PropertyFlow</h1>
+              <div>
+                <h1 className="text-xl font-bold text-white">PropertyFlow</h1>
+                <p className="text-slate-400 text-sm">Property Management System</p>
+              </div>
             </div>
-            <h2 className="text-4xl font-bold text-white mb-4 leading-tight">
-              Professional Property Management Platform
+            
+            <h2 className="text-4xl font-bold text-white mb-6 leading-tight">
+              Professional Property<br />Management Platform
             </h2>
-            <p className="text-xl text-blue-100">
-              Streamline operations, maximize returns, enhance tenant satisfaction
+            
+            <p className="text-xl text-slate-300 mb-12 leading-relaxed">
+              Streamline your property operations, manage tenants efficiently, and maximize your rental income with our comprehensive platform.
             </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 gap-6">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.5 + index * 0.2 }}
-                  className="flex items-start space-x-4 p-4 bg-white/10 rounded-xl backdrop-blur-sm"
-                >
-                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-1">
-                      {feature.title}
-                    </h3>
-                    <p className="text-blue-100 text-sm">{feature.description}</p>
-                  </div>
-                </motion.div>
-              );
-            })}
+            
+            <div className="space-y-6">
+              <div className="flex items-start">
+                <div className="w-6 h-6 bg-blue-600 rounded mr-4 flex items-center justify-center mt-1">
+                  <span className="text-white text-xs">✓</span>
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold mb-1">Complete Portfolio Management</h3>
+                  <p className="text-slate-400">Manage multiple properties and track performance</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start">
+                <div className="w-6 h-6 bg-blue-600 rounded mr-4 flex items-center justify-center mt-1">
+                  <span className="text-white text-xs">✓</span>
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold mb-1">Automated Rent Collection</h3>
+                  <p className="text-slate-400">M-Pesa integration for seamless payments</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start">
+                <div className="w-6 h-6 bg-blue-600 rounded mr-4 flex items-center justify-center mt-1">
+                  <span className="text-white text-xs">✓</span>
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold mb-1">Tenant Communication</h3>
+                  <p className="text-slate-400">Built-in messaging and notification system</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-8">
+            <div>
+              <div className="text-2xl font-bold text-white">5,000+</div>
+              <div className="text-slate-400 text-sm">Properties</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-white">KES 2B+</div>
+              <div className="text-slate-400 text-sm">Rent Collected</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-white">99.9%</div>
+              <div className="text-slate-400 text-sm">Uptime</div>
+            </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
-        <motion.div
-          initial={{ x: 100, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          className="w-full max-w-md"
-        >
-          <div className="glass-strong p-8 border-2">
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="text-center mb-8"
-            >
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                {isSignUp ? 'Create Account' : 'Welcome Back'}
-              </h2>
-              <p className="text-gray-600">
-                {isSignUp 
-                  ? 'Join thousands of property managers' 
-                  : 'Sign in to your dashboard'
-                }
-              </p>
-            </motion.div>
+      {/* Right Side - Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+        <div className="w-full max-w-md">
+          
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center justify-center mb-8">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+              <Building2 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">PropertyFlow</h1>
+              <p className="text-slate-600 text-sm">Property Management</p>
+            </div>
+          </div>
+          
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">
+              {isSignUp ? 'Create Account' : 'Sign In'}
+            </h2>
+            <p className="text-slate-600">
+              {isSignUp 
+                ? 'Start managing your properties today' 
+                : 'Welcome back! Please sign in to continue'
+              }
+            </p>
+          </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.4 }}
-              >
-                <label className="block text-gray-700 text-sm font-medium mb-2">
-                  Email Address
+          <form onSubmit={handleSubmit} className="space-y-6">
+            
+            <div>
+              <label className="block text-slate-700 font-medium mb-2">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-medium mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-10 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            {!isSignUp && (
+              <div className="flex items-center justify-between">
+                <label className="flex items-center">
+                  <input type="checkbox" className="w-4 h-4 text-blue-600 border-slate-300 rounded" />
+                  <span className="ml-2 text-sm text-slate-600">Remember me</span>
                 </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="input pl-10"
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
-              </motion.div>
+                <button type="button" className="text-sm text-blue-600 hover:text-blue-500">
+                  Forgot password?
+                </button>
+              </div>
+            )}
 
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.5 }}
-              >
-                <label className="block text-gray-700 text-sm font-medium mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="input pl-10 pr-10"
-                    placeholder="Enter your password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </motion.div>
-
-              <motion.button
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                type="submit"
-                disabled={isLoading}
-                className="btn btn-primary w-full"
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="spinner" />
-                    <span>{isSignUp ? 'Creating Account...' : 'Signing In...'}</span>
-                  </div>
-                ) : (
-                  isSignUp ? 'Create Account' : 'Sign In'
-                )}
-              </motion.button>
-            </form>
-
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.7 }}
-              className="mt-8 text-center"
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
             >
-              <p className="text-gray-600">
-                {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-              </p>
+              {isLoading ? (
+                <span className="flex items-center justify-center">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                  {isSignUp ? 'Creating Account...' : 'Signing In...'}
+                </span>
+              ) : (
+                isSignUp ? 'Create Account' : 'Sign In'
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-slate-600">
+              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
               <button
                 onClick={() => setIsSignUp(!isSignUp)}
-                className="text-blue-600 hover:text-blue-700 font-medium mt-1 transition-colors"
+                className="ml-1 text-blue-600 hover:text-blue-500 font-medium"
               >
                 {isSignUp ? 'Sign In' : 'Create Account'}
               </button>
-            </motion.div>
+            </p>
           </div>
-        </motion.div>
+
+          <div className="mt-8 pt-6 border-t border-slate-200 text-center">
+            <p className="text-xs text-slate-500">
+              Secure • Encrypted • GDPR Compliant
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
