@@ -33,3 +33,14 @@ Thumbs.db
 
 # Cache
 .cache/
+
+# Firebase service account keys (sensitive)
+backend/config/*.json
+backend/config/*firebase-adminsdk*.json
+
+# Environment files with secrets
+backend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
