@@ -20,22 +20,22 @@ const Navbar = () => {
 
   return (
     <motion.nav
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="navbar px-6 py-4"
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="bg-white border-b border-gray-200 px-6 py-4"
     >
       <div className="flex items-center justify-between">
         {/* Search Bar */}
         <div className="flex-1 max-w-md">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
             <input
               type="text"
               placeholder="Search properties, tenants..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             />
           </div>
         </div>
@@ -46,10 +46,10 @@ const Navbar = () => {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="relative p-2 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors border border-slate-200"
+            className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <Bell className="w-5 h-5 text-slate-600" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+            <Bell className="w-5 h-5" />
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
               <span className="text-xs text-white font-bold">3</span>
             </span>
           </motion.button>
@@ -57,21 +57,21 @@ const Navbar = () => {
           {/* User Menu */}
           <div className="relative">
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center space-x-3 p-2 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors border border-slate-200"
+              className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-semibold text-sm">
                   {currentUser?.email?.charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-slate-900 font-medium text-sm">
+                <p className="text-gray-900 font-medium text-sm">
                   {currentUser?.displayName || 'Landlord'}
                 </p>
-                <p className="text-slate-500 text-xs">{currentUser?.email}</p>
+                <p className="text-gray-500 text-xs">{currentUser?.email}</p>
               </div>
             </motion.button>
 
@@ -81,18 +81,18 @@ const Navbar = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50"
+                className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
               >
                 <div className="p-2">
-                  <button className="w-full flex items-center space-x-3 p-2 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
+                  <button className="w-full flex items-center space-x-3 p-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
                     <User className="w-4 h-4" />
                     <span className="text-sm">Profile</span>
                   </button>
-                  <button className="w-full flex items-center space-x-3 p-2 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
+                  <button className="w-full flex items-center space-x-3 p-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
                     <Settings className="w-4 h-4" />
                     <span className="text-sm">Settings</span>
                   </button>
-                  <hr className="border-slate-200 my-2" />
+                  <hr className="border-gray-200 my-2" />
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center space-x-3 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"

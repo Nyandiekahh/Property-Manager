@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Properties from './pages/Properties';
 import Tenants from './pages/Tenants';
 import PaymentHistory from './pages/PaymentHistory';
+import Analytics from './pages/Analytics';
 
 // Components
 import Navbar from './components/common/Navbar';
@@ -38,6 +39,7 @@ function App() {
                     <Route path="/properties" element={<Properties />} />
                     <Route path="/tenants" element={<Tenants />} />
                     <Route path="/payments" element={<PaymentHistory />} />
+                    <Route path="/analytics" element={<Analytics />} />
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
                 </AnimatePresence>
