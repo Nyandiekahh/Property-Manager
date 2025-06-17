@@ -46,3 +46,4 @@ frontend/.env.test.local
 frontend/.env.production.local
 backend/config/*.json
 backend/config/*.json
+backend/config/*.json
