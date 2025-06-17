@@ -83,14 +83,12 @@ const Tenants = () => {
   const handleSaveTenant = async (tenantData) => {
     try {
       if (selectedTenant) {
-        // Update existing tenant
         await tenantService.updateTenant(selectedTenant.id, tenantData);
         setTenants(tenants.map(t => 
           t.id === selectedTenant.id ? { ...t, ...tenantData } : t
         ));
         toast.success('Tenant updated successfully');
       } else {
-        // Add new tenant
         const newTenantId = await tenantService.createTenant(tenantData, currentUser.uid);
         const newTenant = {
           id: newTenantId,
@@ -131,7 +129,7 @@ const Tenants = () => {
       case 'partial':
         return <AlertCircle className="w-4 h-4 text-blue-500" />;
       default:
-        return <Clock className="w-4 h-4 text-slate-400" />;
+        return <Clock className="w-4 h-4 text-gray-400" />;
     }
   };
 
@@ -151,269 +149,249 @@ const Tenants = () => {
   const totalRent = tenants.reduce((sum, t) => sum + (t.rentAmount || 0), 0);
 
   if (loading) {
-    return <LoadingSpinner text="Loading tenants..." />;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading tenants...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="space-y-6"
-    >
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <motion.div
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="flex flex-col md:flex-row md:items-center md:justify-between"
-      >
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Tenants</h1>
-          <p className="text-slate-600">Manage your tenant relationships</p>
-        </div>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleAddTenant}
-          className="btn btn-primary mt-4 md:mt-0"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Add Tenant
-        </motion.button>
-      </motion.div>
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {[
-          { label: 'Total Tenants', value: tenants.length, icon: Users, color: 'from-blue-500 to-cyan-500' },
-          { label: 'Paid', value: statusCounts.paid, icon: CheckCircle, color: 'from-green-500 to-emerald-500' },
-          { label: 'Pending', value: statusCounts.pending, icon: Clock, color: 'from-yellow-500 to-orange-500' },
-          { label: 'Overdue', value: statusCounts.overdue, icon: AlertCircle, color: 'from-red-500 to-pink-500' },
-          { label: 'Total Monthly Rent', value: formatCurrency(totalRent), icon: DollarSign, color: 'from-purple-500 to-indigo-500' }
-        ].map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <motion.div
-              key={stat.label}
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 + index * 0.1 }}
-              className="card"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-600 text-xs">{stat.label}</p>
-                  <p className="text-lg font-bold text-slate-900 mt-1">{stat.value}</p>
-                </div>
-                <div className={`p-2 rounded-lg bg-gradient-to-r ${stat.color}`}>
-                  <Icon className="w-4 h-4 text-white" />
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Search and Filter */}
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="flex flex-col md:flex-row gap-4"
-      >
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Search tenants..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="input pl-10"
-          />
-        </div>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="input md:w-40"
-        >
-          <option value="all">All Status</option>
-          <option value="paid">Paid</option>
-          <option value="pending">Pending</option>
-          <option value="overdue">Overdue</option>
-          <option value="partial">Partial</option>
-        </select>
-      </motion.div>
-
-      {/* Tenants Grid */}
-      {filteredTenants.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center py-12"
-        >
-          <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-900 mb-2">No tenants found</h3>
-          <p className="text-slate-500 mb-6">
-            {tenants.length === 0 
-              ? "Get started by adding your first tenant" 
-              : "No tenants match your search criteria"}
-          </p>
-          {tenants.length === 0 && (
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Tenants</h1>
+              <p className="text-sm text-gray-600">Manage your tenant relationships</p>
+            </div>
             <button
               onClick={handleAddTenant}
-              className="btn btn-primary"
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
             >
-              <Plus className="w-5 h-5 mr-2" />
-              Add Your First Tenant
+              <Plus className="w-4 h-4" />
+              <span>Add Tenant</span>
             </button>
-          )}
-        </motion.div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredTenants.map((tenant, index) => (
-            <motion.div
-              key={tenant.id}
-             initial={{ y: 20, opacity: 0 }}
-             animate={{ y: 0, opacity: 1 }}
-             transition={{ delay: 0.4 + index * 0.1 }}
-             whileHover={{ scale: 1.02, y: -5 }}
-             className="card hover:glow-primary group"
-           >
-             {/* Tenant Header */}
-             <div className="flex items-start justify-between mb-4">
-               <div className="flex items-center space-x-3">
-                 <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center">
-                   {tenant.avatar ? (
-                     <img src={tenant.avatar} alt={tenant.name} className="w-full h-full rounded-xl object-cover" />
-                   ) : (
-                     <span className="text-white font-semibold">
-                       {getInitials(tenant.name || 'T')}
-                     </span>
-                   )}
-                 </div>
-                 <div>
-                   <h3 className="text-slate-900 font-semibold">{tenant.name}</h3>
-                   <p className="text-slate-600 text-sm">
-                     {getPropertyName(tenant.propertyId)} {tenant.unit ? `• ${tenant.unit}` : ''}
-                   </p>
-                   {tenant.accountNumber && (
-                     <p className="text-slate-500 text-xs font-mono">
-                       Account: {tenant.accountNumber}
-                     </p>
-                   )}
-                 </div>
-               </div>
-               <div className="flex items-center space-x-1">
-                 <motion.button
-                   whileHover={{ scale: 1.1 }}
-                   whileTap={{ scale: 0.9 }}
-                   onClick={() => handleEditTenant(tenant)}
-                   className="p-2 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors opacity-0 group-hover:opacity-100"
-                 >
-                   <Edit className="w-4 h-4 text-slate-600" />
-                 </motion.button>
-                 <motion.button
-                   whileHover={{ scale: 1.1 }}
-                   whileTap={{ scale: 0.9 }}
-                   onClick={() => handleDeleteTenant(tenant.id)}
-                   className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors opacity-0 group-hover:opacity-100"
-                 >
-                   <Trash2 className="w-4 h-4 text-red-500" />
-                 </motion.button>
-               </div>
-             </div>
+          </div>
+        </div>
+      </div>
 
-             {/* Contact Info */}
-             <div className="space-y-2 mb-4">
-               {tenant.email && (
-                 <div className="flex items-center text-slate-600 text-sm">
-                   <Mail className="w-4 h-4 mr-2" />
-                   {tenant.email}
-                 </div>
-               )}
-               {tenant.phone && (
-                 <div className="flex items-center text-slate-600 text-sm">
-                   <Phone className="w-4 h-4 mr-2" />
-                   {tenant.phone}
-                 </div>
-               )}
-               {tenant.moveInDate && (
-                 <div className="flex items-center text-slate-600 text-sm">
-                   <Calendar className="w-4 h-4 mr-2" />
-                   Moved in {formatDate(tenant.moveInDate)}
-                 </div>
-               )}
-             </div>
+      {/* Main Content */}
+      <div className="p-6 space-y-6">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {[
+            { label: 'Total Tenants', value: tenants.length, icon: Users, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+            { label: 'Paid', value: statusCounts.paid, icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50' },
+            { label: 'Pending', value: statusCounts.pending, icon: Clock, color: 'text-yellow-600', bgColor: 'bg-yellow-50' },
+            { label: 'Overdue', value: statusCounts.overdue, icon: AlertCircle, color: 'text-red-600', bgColor: 'bg-red-50' },
+            { label: 'Total Monthly Rent', value: formatCurrency(totalRent), icon: DollarSign, color: 'text-purple-600', bgColor: 'bg-purple-50' }
+          ].map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="bg-white p-4 rounded-lg border border-gray-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 text-xs font-medium">{stat.label}</p>
+                    <p className="text-lg font-bold text-gray-900 mt-1">{stat.value}</p>
+                  </div>
+                  <div className={`p-2 ${stat.bgColor} rounded-lg`}>
+                    <Icon className={`w-4 h-4 ${stat.color}`} />
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
 
-             {/* Payment Info */}
-             <div className="bg-slate-50 p-3 rounded-xl">
-               <div className="flex items-center justify-between mb-2">
-                 <span className="text-slate-600 text-sm">Monthly Rent</span>
-                 <span className="text-slate-900 font-semibold">
-                   {formatCurrency(tenant.rentAmount || 0)}
-                 </span>
-               </div>
-               <div className="flex items-center justify-between">
-                 <div className="flex items-center space-x-2">
-                   {getStatusIcon(tenant.paymentStatus)}
-                   <span className={`text-sm font-medium capitalize ${
-                     tenant.paymentStatus === 'paid' ? 'text-green-500' :
-                     tenant.paymentStatus === 'pending' ? 'text-yellow-500' :
-                     tenant.paymentStatus === 'overdue' ? 'text-red-500' :
-                     'text-blue-500'
-                   }`}>
-                     {tenant.paymentStatus || 'pending'}
-                   </span>
-                 </div>
-                 {tenant.lastPaymentDate && (
-                   <span className="text-slate-500 text-xs">
-                     Last: {formatDate(
-                       tenant.lastPaymentDate.seconds 
-                         ? new Date(tenant.lastPaymentDate.seconds * 1000)
-                         : tenant.lastPaymentDate,
-                       'MMM dd'
-                     )}
-                   </span>
-                 )}
-               </div>
-             </div>
+        {/* Search and Filter */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search tenants..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">All Status</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="overdue">Overdue</option>
+            <option value="partial">Partial</option>
+          </select>
+        </div>
 
-             {/* Actions */}
-             <div className="mt-4 flex space-x-2">
-               <motion.button
-                 whileHover={{ scale: 1.02 }}
-                 whileTap={{ scale: 0.98 }}
-                 className="flex-1 btn btn-secondary text-sm"
-               >
-                 <Mail className="w-4 h-4 mr-1" />
-                 Send Reminder
-               </motion.button>
-               <motion.button
-                 whileHover={{ scale: 1.02 }}
-                 whileTap={{ scale: 0.98 }}
-                 className="flex-1 btn btn-primary text-sm"
-               >
-                 <CreditCard className="w-4 h-4 mr-1" />
-                 Payment History
-               </motion.button>
-             </div>
-           </motion.div>
-         ))}
-       </div>
-     )}
+        {/* Tenants Grid */}
+        {filteredTenants.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+            <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No tenants found</h3>
+            <p className="text-gray-600 mb-6">
+              {tenants.length === 0 
+                ? "Get started by adding your first tenant" 
+                : "No tenants match your search criteria"}
+            </p>
+            {tenants.length === 0 && (
+              <button
+                onClick={handleAddTenant}
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium mx-auto"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Your First Tenant</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredTenants.map((tenant, index) => (
+              <motion.div
+                key={tenant.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+              >
+                {/* Tenant Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                      {tenant.avatar ? (
+                        <img src={tenant.avatar} alt={tenant.name} className="w-full h-full rounded-lg object-cover" />
+                      ) : (
+                        <span className="text-blue-600 font-semibold">
+                          {getInitials(tenant.name || 'T')}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-gray-900 font-semibold">{tenant.name}</h3>
+                      <p className="text-gray-600 text-sm">
+                        {getPropertyName(tenant.propertyId)} {tenant.unit ? `• ${tenant.unit}` : ''}
+                      </p>
+                      {tenant.accountNumber && (
+                        <p className="text-gray-500 text-xs font-mono">
+                          Account: {tenant.accountNumber}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => handleEditTenant(tenant)}
+                      className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTenant(tenant.id)}
+                      className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
 
-     {/* Tenant Modal */}
-     {showModal && (
-       <TenantModal
-         tenant={selectedTenant}
-         properties={properties}
-         onClose={() => setShowModal(false)}
-         onSave={handleSaveTenant}
-       />
-     )}
-   </motion.div>
- );
+                {/* Contact Info */}
+                <div className="space-y-2 mb-4">
+                  {tenant.email && (
+                    <div className="flex items-center text-gray-600 text-sm">
+                      <Mail className="w-4 h-4 mr-2" />
+                      {tenant.email}
+                    </div>
+                  )}
+                  {tenant.phone && (
+                    <div className="flex items-center text-gray-600 text-sm">
+                      <Phone className="w-4 h-4 mr-2" />
+                      {tenant.phone}
+                    </div>
+                  )}
+                  {tenant.moveInDate && (
+                    <div className="flex items-center text-gray-600 text-sm">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Moved in {formatDate(tenant.moveInDate)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Payment Info */}
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-600 text-sm">Monthly Rent</span>
+                    <span className="text-gray-900 font-semibold">
+                      {formatCurrency(tenant.rentAmount || 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      {getStatusIcon(tenant.paymentStatus)}
+                      <span className={`text-sm font-medium capitalize ${
+                        tenant.paymentStatus === 'paid' ? 'text-green-500' :
+                        tenant.paymentStatus === 'pending' ? 'text-yellow-500' :
+                        tenant.paymentStatus === 'overdue' ? 'text-red-500' :
+                        'text-blue-500'
+                      }`}>
+                        {tenant.paymentStatus || 'pending'}
+                      </span>
+                    </div>
+                    {tenant.lastPaymentDate && (
+                      <span className="text-gray-500 text-xs">
+                        Last: {formatDate(
+                          tenant.lastPaymentDate.seconds 
+                            ? new Date(tenant.lastPaymentDate.seconds * 1000)
+                            : tenant.lastPaymentDate,
+                          'MMM dd'
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="mt-4 flex space-x-2">
+                  <button className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                    <Mail className="w-4 h-4" />
+                    <span>Send Reminder</span>
+                  </button>
+                  <button className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                    <CreditCard className="w-4 h-4" />
+                    <span>Payment History</span>
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tenant Modal */}
+      {showModal && (
+        <TenantModal
+          tenant={selectedTenant}
+          properties={properties}
+          onClose={() => setShowModal(false)}
+          onSave={handleSaveTenant}
+        />
+      )}
+    </div>
+  );
 };
 
 export default Tenants;
