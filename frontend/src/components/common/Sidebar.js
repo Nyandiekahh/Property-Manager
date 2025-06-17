@@ -17,11 +17,11 @@ const Sidebar = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const navItems = [
-    { path: '/', icon: Home, label: 'Dashboard' },
-    { path: '/properties', icon: Building2, label: 'Properties' },
-    { path: '/tenants', icon: Users, label: 'Tenants' },
-    { path: '/payments', icon: CreditCard, label: 'Payments' },
-    { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+    { path: '/dashboard', icon: Home, label: 'Dashboard' },
+    { path: '/dashboard/properties', icon: Building2, label: 'Properties' },
+    { path: '/dashboard/tenants', icon: Users, label: 'Tenants' },
+    { path: '/dashboard/payments', icon: CreditCard, label: 'Payments' },
+    { path: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
   ];
 
   const toggleMobileMenu = () => {
@@ -79,7 +79,7 @@ const Sidebar = () => {
         {/* Logo */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
               <Zap className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -105,11 +105,13 @@ const Sidebar = () => {
                 <NavLink
                   to={item.path}
                   onClick={closeMobileMenu}
-                  className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 group ${
-                    isActive
+                  className={({ isActive }) => `
+                    flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 group
+                    ${isActive
                       ? 'bg-blue-50 text-blue-600 border border-blue-100'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
+                    }
+                  `}
                 >
                   <Icon 
                     className={`w-5 h-5 transition-transform duration-200 ${
@@ -128,20 +130,6 @@ const Sidebar = () => {
             );
           })}
         </nav>
-
-        {/* Bottom Section - Upgrade Card */}
-        <div className="p-4 border-t border-gray-200">
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-100">
-            <div className="w-12 h-12 bg-blue-600 rounded-lg mx-auto mb-3 flex items-center justify-center">
-              <BarChart3 className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-gray-900 font-semibold text-sm mb-1 text-center">Upgrade to Pro</h3>
-            <p className="text-gray-600 text-xs mb-3 text-center">Get advanced analytics and unlimited properties</p>
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded-lg transition-colors">
-              Upgrade Now
-            </button>
-          </div>
-        </div>
       </motion.aside>
     </>
   );
