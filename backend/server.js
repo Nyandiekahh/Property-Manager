@@ -210,28 +210,55 @@ try {
 
 // Authentication routes
 app.post('/signup', async (req, res) => {
-  const { email, password, displayName } = req.body;
+  const {  email, password, confirmPassword, name, phoneNumber,  } = req.body;
   
-  if (!email || !password) {
-    return res.status(400).json({ 
+ if (!email || !password || !confirmPassword || !name || !phoneNumber) {
+    return res.status(400).json({
       success: false,
-      error: 'Email and password are required' 
+      error: 'All fields are required: email, password, confirmPassword, name, phoneNumber'
+    });
+  }
+
+  if (password !== confirmPassword) {
+    return res.status(400).json({
+      success: false,
+      error: 'Passwords do not match'
+    });
+  }
+
+  // Password rule check
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({
+      success: false,
+      error: 'Password must be at least 8 characters long and include uppercase, lowercase, number, and special character'
     });
   }
 
   try {
-    const userRecord = await admin.auth().createUser({
+      const userRecord = await admin.auth().createUser({
       email,
       password,
-      displayName: displayName || email.split('@')[0]
+      displayName: name,
+      phoneNumber: phoneNumber
     });
-    
+
+     const usersCol = collection(db, 'Users');
+    await setDoc(doc(usersCol, userRecord.uid), {
+      uid: userRecord.uid,
+      name,
+      email,
+      phoneNumber,
+      createdAt: new Date().toISOString()
+    });
+
     res.status(201).json({ 
       success: true,
       message: 'User created successfully', 
       uid: userRecord.uid,
       email: userRecord.email
     });
+
   } catch (error) {
     console.error('Signup error:', error);
     res.status(400).json({ 
