@@ -3,11 +3,8 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import axios from 'axios';
-<<<<<<< HEAD
-=======
 import cron from 'node-cron';
 import { sendRentReminders } from './controllers/reminderController.js';
->>>>>>> origin/Daniela
 
 // Original routes (for backward compatibility)
 import tenantRoutes from './routes/tenantRoutes.js';
@@ -330,8 +327,6 @@ app.use('*', (req, res) => {
   });
 });
 
-<<<<<<< HEAD
-=======
 // 🔄 Schedule monthly rent reminders on the 28th at 8:00 AM
 cron.schedule('0 8 28 * *', async () => {
   console.log('[CRON] Sending monthly rent reminders (28th, 8:00 AM)');
@@ -343,7 +338,6 @@ cron.schedule('0 8 28 * *', async () => {
   }
 });
 
->>>>>>> origin/Daniela
 // Server startup
 const PORT = process.env.PORT || 5000;
 

@@ -9,23 +9,6 @@
     "dev": "nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-<<<<<<< HEAD
-  "keywords": ["property", "management", "rental", "api", "mpesa"],
-  "author": "Your Name",
-  "license": "ISC",
-  "dependencies": {
-    "express": "^4.18.2",
-    "dotenv": "^16.3.1",
-    "cors": "^2.8.5",
-    "axios": "^1.6.0",
-    "firebase-admin": "^11.11.0",
-    "firebase": "^10.7.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1"
-  }
-}
-=======
   "keywords": [
     "property",
     "management",
@@ -49,4 +32,3 @@
     "nodemon": "^3.1.10"
   }
 }
->>>>>>> origin/Daniela

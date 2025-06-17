@@ -1,11 +1,4 @@
 import express from 'express';
-<<<<<<< HEAD
-const router = express.Router();
-
-router.get('/', (req, res) => {
-  res.send('Landlord route working!');
-});
-=======
 import {
   getNotifications,
   markNotificationAsRead,
@@ -26,6 +19,5 @@ router.put('/password', updatePassword);
 
 // GET /api/landlords/profile
 router.get('/profile', getProfile);
->>>>>>> origin/Daniela
 
 export default router;
