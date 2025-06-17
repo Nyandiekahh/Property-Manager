@@ -2,20 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   BarChart3, 
-  TrendingUp, 
-  TrendingDown,
   DollarSign,
   Users,
   Building2,
-  Calendar,
   Target,
   ArrowUp,
   ArrowDown,
-  AlertCircle,
-  CheckCircle,
-  Clock,
   Download,
-  Filter,
   RefreshCw
 } from 'lucide-react';
 import {
@@ -38,8 +31,7 @@ import {
 } from 'recharts';
 import { useAuth } from '../context/AuthContext';
 import { analyticsService, subscribeToPayments, tenantService, propertyService } from '../services/firestoreService';
-import { formatCurrency, formatDate } from '../utils/helpers';
-import LoadingSpinner from '../components/common/LoadingSpinner';
+import { formatCurrency } from '../utils/helpers';
 
 const Analytics = () => {
   const { currentUser } = useAuth();
@@ -68,7 +60,7 @@ const Analytics = () => {
     
     try {
       setLoading(true);
-      const [dashData, properties, tenants, payments] = await Promise.all([
+      const [dashData, properties, tenants] = await Promise.all([
         analyticsService.getDashboardData(currentUser.uid),
         propertyService.getProperties(currentUser.uid),
         tenantService.getTenants(currentUser.uid),
