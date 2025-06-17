@@ -11,25 +11,37 @@ import {
   DollarSign,
   Search,
   Filter,
-  MoreHorizontal
+  Home,
+  Settings,
+  TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+// CHANGED: Import both original and enhanced services for compatibility
 import { propertyService } from '../services/firestoreService';
+import { 
+  enhancedPropertyService, 
+  enhancedTenantService,
+  enhancedUtils 
+} from '../services/enhancedFirestoreService';
 import { formatCurrency } from '../utils/helpers';
-import PropertyModal from '../components/property/PropertyModal';
+// CHANGED: Import enhanced modal
+import EnhancedPropertyModal from '../components/property/EnhancedPropertyModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
 
 const Properties = () => {
   const { currentUser } = useAuth();
   const [properties, setProperties] = useState([]);
+  const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [useEnhancedMode, setUseEnhancedMode] = useState(false);
 
   useEffect(() => {
     loadProperties();
+    loadTenants();
   }, [currentUser]);
 
   const loadProperties = async () => {
@@ -37,13 +49,40 @@ const Properties = () => {
     
     try {
       setLoading(true);
+      // CHANGED: Load properties and check if any are enhanced
       const data = await propertyService.getProperties(currentUser.uid);
       setProperties(data);
+      
+      // Check if any properties have enhanced features (unitTypes)
+      const hasEnhancedProperties = data.some(p => p.unitTypes && p.unitTypes.length > 0);
+      if (hasEnhancedProperties) {
+        setUseEnhancedMode(true);
+      }
     } catch (error) {
       console.error('Error loading properties:', error);
       toast.error('Failed to load properties');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTenants = async () => {
+    if (!currentUser) return;
+    
+    try {
+      // CHANGED: Use enhanced service to get all tenants (works with old data too)
+      const tenantsData = await enhancedTenantService.getTenants(currentUser.uid);
+      setTenants(tenantsData);
+    } catch (error) {
+      console.error('Error loading tenants:', error);
+      // Fallback to original service if enhanced fails
+      try {
+        const { getAllTenants } = await import('../services/firestoreService');
+        const fallbackData = await getAllTenants();
+        setTenants(fallbackData.filter(t => t.landlordId === currentUser.uid));
+      } catch (fallbackError) {
+        console.error('Fallback tenant loading failed:', fallbackError);
+      }
     }
   };
 
@@ -58,14 +97,28 @@ const Properties = () => {
   };
 
   const handleDeleteProperty = async (propertyId) => {
+    const property = properties.find(p => p.id === propertyId);
+    const hasOccupiedUnits = property && property.occupiedUnits > 0;
+    
+    if (hasOccupiedUnits) {
+      toast.error('Cannot delete property with occupied units. Please move out all tenants first.');
+      return;
+    }
+
     if (window.confirm('Are you sure you want to delete this property?')) {
       try {
-        await propertyService.deleteProperty(propertyId);
+        // CHANGED: Use enhanced service if property has enhanced features
+        if (property && property.unitTypes) {
+          await enhancedPropertyService.deleteProperty(propertyId);
+        } else {
+          await propertyService.deleteProperty(propertyId);
+        }
+        
         setProperties(properties.filter(p => p.id !== propertyId));
         toast.success('Property deleted successfully');
       } catch (error) {
         console.error('Error deleting property:', error);
-        toast.error('Failed to delete property');
+        toast.error(error.message || 'Failed to delete property');
       }
     }
   };
@@ -73,28 +126,41 @@ const Properties = () => {
   const handleSaveProperty = async (propertyData) => {
     try {
       if (selectedProperty) {
-        await propertyService.updateProperty(selectedProperty.id, propertyData);
-        setProperties(properties.map(p => 
-          p.id === selectedProperty.id ? { ...p, ...propertyData } : p
-        ));
+        // CHANGED: Use enhanced service if creating with unit types
+        if (propertyData.unitTypes) {
+          await enhancedPropertyService.updateProperty(selectedProperty.id, propertyData);
+          setUseEnhancedMode(true);
+        } else {
+          await propertyService.updateProperty(selectedProperty.id, propertyData);
+        }
         toast.success('Property updated successfully');
       } else {
-        const newPropertyId = await propertyService.createProperty(propertyData, currentUser.uid);
-        const newProperty = {
-          id: newPropertyId,
-          ...propertyData,
-          landlordId: currentUser.uid,
-          occupiedUnits: 0,
-          monthlyRevenue: 0,
-          createdAt: new Date()
-        };
-        setProperties([newProperty, ...properties]);
-        toast.success('Property added successfully');
+        let newPropertyId;
+        // CHANGED: Use enhanced service if creating with unit types
+        if (propertyData.unitTypes && propertyData.unitTypes.length > 0) {
+          newPropertyId = await enhancedPropertyService.createProperty(propertyData, currentUser.uid);
+          setUseEnhancedMode(true);
+          toast.success('Enhanced property created with unit types!');
+        } else {
+          // Convert to old format for backward compatibility
+          const oldFormatData = {
+            name: propertyData.name,
+            location: propertyData.location,
+            type: propertyData.type,
+            units: propertyData.units || 0,
+            rentPerUnit: propertyData.rentPerUnit || 0,
+            description: propertyData.description,
+            image: propertyData.image
+          };
+          newPropertyId = await propertyService.createProperty(oldFormatData, currentUser.uid);
+          toast.success('Property added successfully');
+        }
       }
       setShowModal(false);
+      loadProperties(); // Reload to get updated data
     } catch (error) {
       console.error('Error saving property:', error);
-      toast.error('Failed to save property');
+      toast.error(error.message || 'Failed to save property');
     }
   };
 
@@ -103,9 +169,33 @@ const Properties = () => {
     property.location?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalUnits = properties.reduce((sum, p) => sum + (p.totalUnits || 0), 0);
-  const totalOccupied = properties.reduce((sum, p) => sum + (p.occupiedUnits || 0), 0);
-  const totalRevenue = properties.reduce((sum, p) => sum + (p.monthlyRevenue || 0), 0);
+  // ENHANCED: Calculate stats with both old and new property formats
+  const calculateStats = () => {
+    let totalUnits = 0;
+    let totalOccupied = 0;
+    let totalRevenue = 0;
+
+    properties.forEach(property => {
+      // Handle both old and new property formats
+      if (property.totalUnits !== undefined) {
+        // New enhanced format
+        totalUnits += property.totalUnits || 0;
+        totalOccupied += property.occupiedUnits || 0;
+        totalRevenue += property.monthlyRevenue || 0;
+      } else {
+        // Old format
+        totalUnits += property.units || 0;
+        // Count tenants for this property
+        const propertyTenants = tenants.filter(t => t.propertyId === property.id && t.isActive !== false);
+        totalOccupied += propertyTenants.length;
+        totalRevenue += propertyTenants.reduce((sum, t) => sum + (t.rentAmount || 0), 0);
+      }
+    });
+
+    return { totalUnits, totalOccupied, totalRevenue };
+  };
+
+  const { totalUnits, totalOccupied, totalRevenue } = calculateStats();
   const occupancyRate = totalUnits > 0 ? ((totalOccupied / totalUnits) * 100).toFixed(1) : 0;
 
   if (loading) {
@@ -126,16 +216,41 @@ const Properties = () => {
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Properties</h1>
-              <p className="text-sm text-gray-600">Manage your property portfolio</p>
+              <div className="flex items-center space-x-3">
+                <h1 className="text-xl font-semibold text-gray-900">
+                  {useEnhancedMode ? 'Enhanced Properties' : 'Properties'}
+                </h1>
+                {useEnhancedMode && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                    Enhanced Mode
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-600">
+                {useEnhancedMode 
+                  ? 'Unit-based property management with auto-assignment'
+                  : 'Manage your property portfolio'
+                }
+              </p>
             </div>
-            <button
-              onClick={handleAddProperty}
-              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Property</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              {useEnhancedMode && (
+                <button
+                  onClick={() => setUseEnhancedMode(!useEnhancedMode)}
+                  className="flex items-center space-x-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span className="text-sm">Mode</span>
+                </button>
+              )}
+              <button
+                onClick={handleAddProperty}
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Property</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -147,7 +262,7 @@ const Properties = () => {
           {[
             { label: 'Total Properties', value: properties.length, icon: Building2, color: 'text-blue-600', bgColor: 'bg-blue-50' },
             { label: 'Total Units', value: totalUnits, icon: Users, color: 'text-green-600', bgColor: 'bg-green-50' },
-            { label: 'Occupancy Rate', value: `${occupancyRate}%`, icon: Eye, color: 'text-purple-600', bgColor: 'bg-purple-50' },
+            { label: 'Occupancy Rate', value: `${occupancyRate}%`, icon: TrendingUp, color: 'text-purple-600', bgColor: 'bg-purple-50' },
             { label: 'Monthly Revenue', value: formatCurrency(totalRevenue), icon: DollarSign, color: 'text-orange-600', bgColor: 'bg-orange-50' }
           ].map((stat, index) => {
             const Icon = stat.icon;
@@ -172,6 +287,28 @@ const Properties = () => {
             );
           })}
         </div>
+
+        {/* Enhanced Mode Notice */}
+        {!useEnhancedMode && properties.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <Home className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div>
+                <h4 className="text-blue-800 font-medium">Upgrade to Enhanced Properties</h4>
+                <p className="text-blue-700 text-sm mt-1">
+                  Create properties with multiple unit types, auto-generated account numbers, 
+                  and smart tenant assignment. Existing properties will continue working as normal.
+                </p>
+                <button
+                  onClick={() => setUseEnhancedMode(true)}
+                  className="mt-2 text-blue-600 text-sm font-medium hover:text-blue-800"
+                >
+                  Learn More →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Search and Filter */}
         <div className="flex flex-col md:flex-row gap-4">
@@ -213,90 +350,151 @@ const Properties = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredProperties.map((property, index) => (
-              <motion.div
-                key={property.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
-              >
-                {/* Property Image */}
-                <div className="relative h-48 rounded-t-lg overflow-hidden bg-gray-100">
-                  {property.image ? (
-                    <img
-                      src={property.image}
-                      alt={property.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <div className="absolute inset-0 bg-gray-200 flex items-center justify-center" style={{ display: property.image ? 'none' : 'flex' }}>
-                    <Building2 className="w-12 h-12 text-gray-400" />
-                  </div>
-                  <div className="absolute top-3 right-3">
-                    <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-lg text-gray-900 text-xs font-medium">
-                      {property.type || 'Property'}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-3 left-3">
-                    <div className="flex items-center text-white text-sm">
-                      <MapPin className="w-4 h-4 mr-1" />
-                      {property.location || 'Location not specified'}
+            {filteredProperties.map((property, index) => {
+              // ENHANCED: Calculate stats for both old and new format
+              const isEnhanced = property.unitTypes && property.unitTypes.length > 0;
+              
+              let displayUnits, displayOccupied, displayRevenue, displayOccupancyRate;
+              
+              if (isEnhanced) {
+                // New enhanced format
+                displayUnits = property.totalUnits || 0;
+                displayOccupied = property.occupiedUnits || 0;
+                displayRevenue = property.monthlyRevenue || 0;
+              } else {
+                // Old format - calculate from tenants
+                displayUnits = property.units || 0;
+                const propertyTenants = tenants.filter(t => t.propertyId === property.id && t.isActive !== false);
+                displayOccupied = propertyTenants.length;
+                displayRevenue = propertyTenants.reduce((sum, t) => sum + (t.rentAmount || 0), 0);
+              }
+              
+              displayOccupancyRate = displayUnits > 0 ? Math.round((displayOccupied / displayUnits) * 100) : 0;
+
+              return (
+                <motion.div
+                  key={property.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+                >
+                  {/* Property Image */}
+                  <div className="relative h-48 rounded-t-lg overflow-hidden bg-gray-100">
+                    {property.image ? (
+                      <img
+                        src={property.image}
+                        alt={property.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div className="absolute inset-0 bg-gray-200 flex items-center justify-center" style={{ display: property.image ? 'none' : 'flex' }}>
+                      <Building2 className="w-12 h-12 text-gray-400" />
+                    </div>
+                    <div className="absolute top-3 right-3 flex space-x-2">
+                      <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded-lg text-gray-900 text-xs font-medium">
+                        {property.type || 'Property'}
+                      </span>
+                      {isEnhanced && (
+                        <span className="px-2 py-1 bg-blue-600/90 backdrop-blur-sm rounded-lg text-white text-xs font-medium">
+                          Enhanced
+                        </span>
+                      )}
+                    </div>
+                    <div className="absolute bottom-3 left-3">
+                      <div className="flex items-center text-white text-sm">
+                        <MapPin className="w-4 h-4 mr-1" />
+                        {property.location || 'Location not specified'}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Property Info */}
-                <div className="p-6 space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{property.name}</h3>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">
-                        Units: {property.occupiedUnits || 0}/{property.totalUnits || property.units || 0}
-                      </span>
-                      <span className="text-green-600 font-medium">
-                        {property.totalUnits > 0 ? 
-                          Math.round(((property.occupiedUnits || 0) / property.totalUnits) * 100) : 0}% occupied
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
+                  {/* Property Info */}
+                  <div className="p-6 space-y-4">
                     <div>
-                      <p className="text-gray-600 text-sm">Monthly Revenue</p>
-                      <p className="text-gray-900 font-semibold">
-                        {formatCurrency(property.monthlyRevenue || 0)}
-                      </p>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{property.name}</h3>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">
+                          Units: {displayOccupied}/{displayUnits}
+                        </span>
+                        <span className={`font-medium ${displayOccupancyRate >= 80 ? 'text-green-600' : displayOccupancyRate >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {displayOccupancyRate}% occupied
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleEditProperty(property)}
-                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteProperty(property.id)}
-                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+
+                    {/* ENHANCED: Show unit types for enhanced properties */}
+                    {isEnhanced && property.unitTypes && (
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-gray-600 text-xs font-medium mb-2">Unit Types:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {property.unitTypes.map((unitType, idx) => (
+                            <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                              {enhancedUtils.getUnitTypeDisplayName(unitType.type)}
+                            </span>
+                          ))}
+                        </div>
+                        {property.paybill && (
+                          <p className="text-gray-500 text-xs mt-2">
+                            Paybill: {property.paybill} • Prefix: {property.accountPrefix}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-gray-600 text-sm">Monthly Revenue</p>
+                        <p className="text-gray-900 font-semibold">
+                          {formatCurrency(displayRevenue)}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleEditProperty(property)}
+                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProperty(property.id)}
+                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
+
+                    {/* ENHANCED: Additional info for enhanced properties */}
+                    {isEnhanced && (
+                      <div className="pt-3 border-t border-gray-100">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-gray-500">Available Units</p>
+                            <p className="text-gray-900 font-medium">{property.availableUnits || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Unit Types</p>
+                            <p className="text-gray-900 font-medium">{property.unitTypes?.length || 0}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Property Modal */}
+      {/* ENHANCED: Property Modal - will show enhanced modal for new properties */}
       {showModal && (
-        <PropertyModal
+        <EnhancedPropertyModal
           property={selectedProperty}
           onClose={() => setShowModal(false)}
           onSave={handleSaveProperty}
