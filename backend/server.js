@@ -3,11 +3,17 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import axios from 'axios';
+<<<<<<< HEAD
+=======
+import cron from 'node-cron';
+import { sendRentReminders } from './controllers/reminderController.js';
+>>>>>>> origin/Daniela
 
 // Original routes (for backward compatibility)
 import tenantRoutes from './routes/tenantRoutes.js';
 import landlordRoutes from './routes/landlordRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
+import reminderRoutes from './routes/reminderRoutes.js';
 
 // Enhanced routes (new system)
 import enhancedPropertyRoutes from './routes/enhancedPropertyRoutes.js';
@@ -39,6 +45,7 @@ app.use((req, res, next) => {
 app.use('/api/tenants', tenantRoutes);
 app.use('/api/landlords', landlordRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/reminders', reminderRoutes);
 
 // Enhanced API routes (v2 - new features)
 app.use('/api/enhanced/properties', enhancedPropertyRoutes);
@@ -323,6 +330,20 @@ app.use('*', (req, res) => {
   });
 });
 
+<<<<<<< HEAD
+=======
+// 🔄 Schedule monthly rent reminders on the 28th at 8:00 AM
+cron.schedule('0 8 28 * *', async () => {
+  console.log('[CRON] Sending monthly rent reminders (28th, 8:00 AM)');
+  try {
+    await sendRentReminders();
+    console.log('[CRON] Rent reminders sent successfully');
+  } catch (err) {
+    console.error('[CRON] Failed to send rent reminders:', err.message);
+  }
+});
+
+>>>>>>> origin/Daniela
 // Server startup
 const PORT = process.env.PORT || 5000;
 
