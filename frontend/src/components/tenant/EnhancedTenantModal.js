@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User, Mail, Phone, Calendar, Building2, Home, AlertCircle, CheckCircle } from 'lucide-react';
+import { X, User, Mail, Phone, Calendar, Building2, Home, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+// CHANGED: Import API services and toast for better user feedback
+import { 
+  enhancedPropertyAPI, 
+  enhancedTenantAPI 
+} from '../../services/enhancedApiService';
+import toast from 'react-hot-toast';
 
 const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
   const [formData, setFormData] = useState({
@@ -22,6 +28,8 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [unitTypes, setUnitTypes] = useState([]);
   const [loading, setLoading] = useState(false);
+  // CHANGED: Add form submission loading state
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (tenant) {
@@ -77,26 +85,31 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
     }
   };
 
+  // CHANGED: Use API to load available units
   const loadAvailableUnits = async (propertyId, unitType) => {
     setLoading(true);
     try {
-      // Simulate API call - replace with actual API call
-      const property = properties.find(p => p.id === propertyId);
-      if (property && property.units) {
-        const available = property.units.filter(unit => 
-          unit.unitType === unitType && 
-          (!unit.isOccupied || (tenant && unit.unitNumber === tenant.unitNumber))
-        );
-        setAvailableUnits(available);
+      const response = await enhancedPropertyAPI.getAvailableUnits(propertyId, unitType);
+      
+      if (response.success) {
+        const units = response.data || [];
+        setAvailableUnits(units);
+      } else {
+        console.error('Failed to load available units:', response.error);
+        setAvailableUnits([]);
+        toast.error('Failed to load available units');
       }
     } catch (error) {
       console.error('Error loading available units:', error);
+      setAvailableUnits([]);
+      // Don't show error toast for unit loading as it's not critical
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = (e) => {
+  // CHANGED: Enhanced form submission with API integration
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validate form
@@ -119,20 +132,70 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
       newErrors.phone = 'Please enter a valid Kenyan phone number';
     }
 
+    // Check if units are available for new tenants
+    if (!tenant && formData.unitType && availableUnits.length === 0) {
+      newErrors.unitType = 'No available units for this unit type';
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      toast.error('Please fix the validation errors before submitting');
       return;
     }
 
     setErrors({});
-    onSave(formData);
+    setSubmitting(true);
+
+    try {
+      // Prepare enhanced tenant data for API
+      const enhancedTenantData = {
+        ...formData,
+        // Convert moveInDate to proper format
+        moveInDate: new Date(formData.moveInDate),
+        // Add metadata
+        createdAt: tenant ? tenant.createdAt : new Date(),
+        updatedAt: new Date(),
+        // Format phone number
+        phone: formData.phone.startsWith('+254') ? formData.phone : 
+               formData.phone.startsWith('0') ? '+254' + formData.phone.slice(1) : 
+               '+254' + formData.phone,
+        // Add unit assignment details
+        unitAssignment: {
+          propertyId: formData.propertyId,
+          unitType: formData.unitType,
+          preferredUnit: formData.preferredUnit || null,
+          autoAssign: !formData.preferredUnit
+        }
+      };
+
+      // Call the parent onSave function with enhanced data
+      await onSave(enhancedTenantData);
+      
+      // Success feedback is handled by the parent component
+      // onClose will be called by parent on success
+      
+    } catch (error) {
+      console.error('Error saving tenant:', error);
+      toast.error('Failed to save tenant. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
+    }
   };
 
   const getSelectedUnitDetails = () => {
@@ -149,7 +212,20 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
       currency: 'KES',
+      minimumFractionDigits: 0
     }).format(amount);
+  };
+
+  const getUnitTypeDisplayName = (unitType) => {
+    const displayNames = {
+      'bedsitter': 'Bedsitter',
+      '1bedroom': '1 Bedroom',
+      '2bedroom': '2 Bedroom', 
+      '3bedroom': '3 Bedroom',
+      'studio': 'Studio',
+      'penthouse': 'Penthouse'
+    };
+    return displayNames[unitType] || unitType?.charAt(0).toUpperCase() + unitType?.slice(1);
   };
 
   const unitDetails = getSelectedUnitDetails();
@@ -162,7 +238,7 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-        onClick={onClose}
+        onClick={submitting ? undefined : onClose} // Prevent closing while submitting
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
@@ -178,13 +254,19 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
               <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
                 <User className="w-5 h-5 text-white" />
               </div>
-              <h2 className="text-xl font-bold text-gray-900">
-                {tenant ? 'Edit Tenant' : 'Add New Tenant'}
-              </h2>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {tenant ? 'Edit Enhanced Tenant' : 'Add Enhanced Tenant'}
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {tenant ? 'Update tenant with smart unit management' : 'Smart tenant assignment with auto-generated account numbers'}
+                </p>
+              </div>
             </div>
             <button
-              onClick={onClose}
-              className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              onClick={submitting ? undefined : onClose}
+              disabled={submitting}
+              className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <X className="w-5 h-5 text-gray-600" />
             </button>
@@ -209,7 +291,8 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      disabled={submitting}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed ${
                         errors.name ? 'border-red-500' : 'border-gray-300'
                       }`}
                       placeholder="Enter full name"
@@ -230,7 +313,8 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      disabled={submitting}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed ${
                         errors.email ? 'border-red-500' : 'border-gray-300'
                       }`}
                       placeholder="Enter email address"
@@ -242,7 +326,7 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                 {/* Phone */}
                 <div>
                   <label className="block text-gray-700 text-sm font-medium mb-2">
-                    Phone Number *
+                    Phone Number * (M-Pesa)
                   </label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
@@ -251,13 +335,17 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      disabled={submitting}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed ${
                         errors.phone ? 'border-red-500' : 'border-gray-300'
                       }`}
-                      placeholder="+254..."
+                      placeholder="+254712345678"
                     />
                   </div>
                   {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+                  <p className="text-gray-500 text-sm mt-1">
+                    This will be used for M-Pesa payment notifications
+                  </p>
                 </div>
 
                 {/* ID Number */}
@@ -270,7 +358,8 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                     name="idNumber"
                     value={formData.idNumber}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={submitting}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                     placeholder="Enter ID number"
                   />
                 </div>
@@ -285,7 +374,8 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                     name="occupation"
                     value={formData.occupation}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={submitting}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                     placeholder="Enter occupation"
                   />
                 </div>
@@ -302,7 +392,8 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                       name="moveInDate"
                       value={formData.moveInDate}
                       onChange={handleChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      disabled={submitting}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed ${
                         errors.moveInDate ? 'border-red-500' : 'border-gray-300'
                       }`}
                     />
@@ -321,7 +412,22 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                       name="emergencyContact"
                       value={formData.emergencyContact}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={submitting}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                      placeholder="Enter emergency contact name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 text-sm font-medium mb-2">
+                      Emergency Contact Phone
+                    </label>
+                    <input
+                      type="tel"
+                      name="emergencyPhone"
+                      value={formData.emergencyPhone}
+                      onChange={handleChange}
+                      disabled={submitting}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                       placeholder="+254..."
                     />
                   </div>
@@ -330,12 +436,12 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
 
               {/* Property & Unit Information */}
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Property & Unit Information</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Smart Property & Unit Assignment</h3>
                 
                 {/* Property Selection */}
                 <div>
                   <label className="block text-gray-700 text-sm font-medium mb-2">
-                    Property *
+                    Enhanced Property *
                   </label>
                   <div className="relative">
                     <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
@@ -343,14 +449,16 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                       name="propertyId"
                       value={formData.propertyId}
                       onChange={handleChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none ${
+                      disabled={submitting}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none disabled:bg-gray-50 disabled:cursor-not-allowed ${
                         errors.propertyId ? 'border-red-500' : 'border-gray-300'
                       }`}
                     >
-                      <option value="">Select property</option>
+                      <option value="">Select enhanced property</option>
                       {properties.map(property => (
                         <option key={property.id} value={property.id}>
                           {property.name} - {property.location}
+                          {property.unitTypes?.length > 0 && ' (Enhanced)'}
                         </option>
                       ))}
                     </select>
@@ -370,14 +478,15 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                         name="unitType"
                         value={formData.unitType}
                         onChange={handleChange}
-                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none ${
+                        disabled={submitting}
+                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none disabled:bg-gray-50 disabled:cursor-not-allowed ${
                           errors.unitType ? 'border-red-500' : 'border-gray-300'
                         }`}
                       >
                         <option value="">Select unit type</option>
                         {unitTypes.map(unitType => (
                           <option key={unitType.type} value={unitType.type}>
-                            {unitType.type.charAt(0).toUpperCase() + unitType.type.slice(1)} - {formatCurrency(unitType.rentAmount)}
+                            {getUnitTypeDisplayName(unitType.type)} - {formatCurrency(unitType.rentAmount)}
                           </option>
                         ))}
                       </select>
@@ -396,17 +505,19 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                       name="preferredUnit"
                       value={formData.preferredUnit}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                      disabled={submitting}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none disabled:bg-gray-50 disabled:cursor-not-allowed"
                     >
                       <option value="">Auto-assign first available unit</option>
                       {availableUnits.map(unit => (
                         <option key={unit.unitNumber} value={unit.unitNumber}>
-                          Unit {unit.unitNumber} - {formatCurrency(unit.rentAmount)}
+                          Unit {unit.unitNumber} - {formatCurrency(unit.rentAmount)} 
+                          {unit.accountNumber && ` (Account: ${unit.accountNumber})`}
                         </option>
                       ))}
                     </select>
                     <p className="text-gray-500 text-sm mt-1">
-                      {availableUnits.length} unit(s) available for {formData.unitType}
+                      {availableUnits.length} unit(s) available for {getUnitTypeDisplayName(formData.unitType)}
                     </p>
                   </div>
                 )}
@@ -427,7 +538,7 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                       <div>
                         <h4 className="text-red-800 font-medium">No Available Units</h4>
                         <p className="text-red-700 text-sm">
-                          All {formData.unitType} units in this property are currently occupied.
+                          All {getUnitTypeDisplayName(formData.unitType)} units in this property are currently occupied.
                         </p>
                       </div>
                     </div>
@@ -440,11 +551,11 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                     <div className="flex items-start space-x-3">
                       <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
                       <div className="flex-1">
-                        <h4 className="text-green-800 font-medium mb-2">Unit Assignment Details</h4>
+                        <h4 className="text-green-800 font-medium mb-2">Selected Unit Details</h4>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
                             <p className="text-green-700"><strong>Unit Number:</strong> {unitDetails.unitNumber}</p>
-                            <p className="text-green-700"><strong>Unit Type:</strong> {unitDetails.unitType}</p>
+                            <p className="text-green-700"><strong>Unit Type:</strong> {getUnitTypeDisplayName(unitDetails.unitType)}</p>
                           </div>
                           <div>
                             <p className="text-green-700"><strong>Monthly Rent:</strong> {formatCurrency(unitDetails.rentAmount)}</p>
@@ -458,15 +569,15 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
 
                 {/* Auto-Assignment Info */}
                 {formData.unitType && !formData.preferredUnit && availableUnits.length > 0 && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
                       <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
                       <div>
-                        <h4 className="text-blue-800 font-medium">Auto-Assignment</h4>
+                        <h4 className="text-blue-800 font-medium">Smart Auto-Assignment</h4>
                         <p className="text-blue-700 text-sm mt-1">
-                          The tenant will be automatically assigned to unit <strong>{availableUnits[0]?.unitNumber}</strong> 
+                          The system will automatically assign this tenant to unit <strong>{availableUnits[0]?.unitNumber}</strong> 
                           with rent <strong>{formatCurrency(availableUnits[0]?.rentAmount || 0)}</strong> 
-                          and account number <strong>{availableUnits[0]?.accountNumber}</strong>.
+                          and auto-generate account number <strong>{availableUnits[0]?.accountNumber}</strong>.
                         </p>
                       </div>
                     </div>
@@ -476,30 +587,32 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
                 {/* Property Payment Info */}
                 {selectedProperty && (
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <h4 className="text-gray-800 font-medium mb-2">Payment Information</h4>
+                    <h4 className="text-gray-800 font-medium mb-2">M-Pesa Payment Configuration</h4>
                     <div className="text-sm text-gray-700 space-y-1">
                       <p><strong>Paybill:</strong> {selectedProperty.paybill}</p>
                       <p><strong>Account Format:</strong> {selectedProperty.accountPrefix}#[Unit Number]</p>
                       {unitTypeDetails && (
                         <p><strong>Monthly Rent:</strong> {formatCurrency(unitTypeDetails.rentAmount)}</p>
                       )}
+                      <p className="text-green-600 font-medium">✓ Auto-generated account numbers for easy M-Pesa payments</p>
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Important Notes */}
-            <div className="mt-8 bg-amber-50 border border-amber-200 rounded-lg p-4">
+            {/* Enhanced Features Info */}
+            <div className="mt-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-4">
               <div className="flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <h4 className="text-amber-800 font-medium">Important Notes:</h4>
+                  <h4 className="text-amber-800 font-medium">Enhanced Tenant Features:</h4>
                   <ul className="text-amber-700 text-sm mt-1 space-y-1">
-                    <li>• Rent amount is automatically set based on the selected unit type</li>
-                    <li>• Account number is auto-generated using the property's paybill configuration</li>
-                    <li>• Once assigned, the unit will be marked as occupied</li>
-                    <li>• You can move tenants to different units later if needed</li>
+                    <li>• <strong>Smart Unit Assignment:</strong> Automatic assignment to available units</li>
+                    <li>• <strong>M-Pesa Integration:</strong> Auto-generated account numbers for easy payments</li>
+                    <li>• <strong>Payment Tracking:</strong> Real-time payment status updates</li>
+                    <li>• <strong>Unit Management:</strong> Easy transfer between units when needed</li>
+                    <li>• <strong>Balance Tracking:</strong> Automatic tracking of overpayments and balances</li>
                   </ul>
                 </div>
               </div>
@@ -510,16 +623,22 @@ const EnhancedTenantModal = ({ tenant, properties, onClose, onSave }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={submitting}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={!formData.propertyId || !formData.unitType || (formData.unitType && availableUnits.length === 0)}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                disabled={submitting || !formData.propertyId || !formData.unitType || (formData.unitType && availableUnits.length === 0)}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
               >
-                {tenant ? 'Update Tenant' : 'Add Tenant'}
+                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>
+                  {submitting 
+                    ? (tenant ? 'Updating...' : 'Adding...') 
+                    : (tenant ? 'Update Tenant' : 'Add Tenant')}
+                </span>
               </button>
             </div>
           </form>

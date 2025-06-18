@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useAuth } from './context/AuthContext';
@@ -16,17 +16,17 @@ import Analytics from './pages/Analytics';
 import Navbar from './components/common/Navbar';
 import Sidebar from './components/common/Sidebar';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import NotificationCenter from './components/notifications/NotificationCenter';
 
 // Protected Route wrapper component
 const ProtectedRoute = ({ children }) => {
   const { currentUser } = useAuth();
   const location = useLocation();
-  
+
   if (!currentUser) {
-    // Redirect to login with the attempted location
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  
+
   return children;
 };
 
@@ -47,6 +47,7 @@ const DashboardLayout = ({ children }) => {
 
 function App() {
   const { currentUser, loading } = useAuth();
+  const [showNotifications, setShowNotifications] = useState(false);
 
   if (loading) {
     return <LoadingSpinner text="Loading RentFlow..." />;
@@ -54,7 +55,16 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen">
+      <div className="min-h-screen relative">
+        <NotificationCenter 
+          isOpen={showNotifications}
+          onClose={() => setShowNotifications(false)}
+          onNotificationClick={(notification) => {
+            console.log('Clicked notification:', notification);
+            // Optionally, handle navigation here
+          }}
+        />
+
         <AnimatePresence mode="wait">
           <Routes>
             {/* Public Routes */}
@@ -119,13 +129,13 @@ function App() {
               } 
             />
 
-            {/* Legacy route redirects for backward compatibility */}
+            {/* Legacy route redirects */}
             <Route path="/properties" element={<Navigate to="/dashboard/properties" replace />} />
             <Route path="/tenants" element={<Navigate to="/dashboard/tenants" replace />} />
             <Route path="/payments" element={<Navigate to="/dashboard/payments" replace />} />
             <Route path="/analytics" element={<Navigate to="/dashboard/analytics" replace />} />
             
-            {/* Catch all route */}
+            {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AnimatePresence>

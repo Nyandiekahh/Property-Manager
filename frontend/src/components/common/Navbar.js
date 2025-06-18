@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bell, 
@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+// CHANGED: Import API services instead of mock data
+import { enhancedLandlordAPI } from '../../services/enhancedApiService';
 import toast from 'react-hot-toast';
 
 const Navbar = () => {
@@ -19,6 +21,92 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  // CHANGED: Add state for real notifications from API
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+
+  // CHANGED: Load notifications from API on component mount
+  useEffect(() => {
+    if (currentUser) {
+      loadNotifications();
+    }
+  }, [currentUser]);
+
+  // CHANGED: Load notifications from API
+  const loadNotifications = async () => {
+    try {
+      setNotificationsLoading(true);
+      const response = await enhancedLandlordAPI.getNotifications();
+      
+      if (response.success) {
+        setNotifications(response.data || []);
+      } else {
+        console.error('Failed to load notifications:', response.error);
+        // Fallback to empty array
+        setNotifications([]);
+      }
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+      // Fallback to mock notifications if API fails
+      setNotifications([
+        {
+          id: 'mock-1',
+          title: 'System Notification',
+          message: 'API notifications temporarily unavailable',
+          time: 'Just now',
+          unread: false,
+          type: 'system'
+        }
+      ]);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  // CHANGED: Mark notification as read via API
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      const response = await enhancedLandlordAPI.markNotificationAsRead(notificationId);
+      
+      if (response.success) {
+        // Update local state
+        setNotifications(prev => 
+          prev.map(notif => 
+            notif.id === notificationId 
+              ? { ...notif, unread: false }
+              : notif
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // CHANGED: Handle notification click
+  const handleNotificationClick = (notification) => {
+    if (notification.unread) {
+      markNotificationAsRead(notification.id);
+    }
+    
+    // Handle notification navigation based on type
+    switch (notification.type) {
+      case 'payment':
+        navigate('/payment-history');
+        break;
+      case 'tenant':
+        navigate('/tenants');
+        break;
+      case 'property':
+        navigate('/properties');
+        break;
+      default:
+        // No navigation for general notifications
+        break;
+    }
+    
+    setShowNotifications(false);
+  };
 
   const handleLogout = async () => {
     try {
@@ -48,34 +136,7 @@ const Navbar = () => {
     setShowUserMenu(false);
   };
 
-  // Mock notifications - in real app, these would come from your backend
-  const notifications = [
-    {
-      id: 1,
-      title: 'New payment received',
-      message: 'KES 25,000 from John Doe',
-      time: '2 minutes ago',
-      unread: true,
-      type: 'payment'
-    },
-    {
-      id: 2,
-      title: 'Rent reminder sent',
-      message: 'Reminder sent to 3 tenants',
-      time: '1 hour ago',
-      unread: true,
-      type: 'reminder'
-    },
-    {
-      id: 3,
-      title: 'New tenant registered',
-      message: 'Sarah Wanjiku added to Kileleshwa Apartments',
-      time: '3 hours ago',
-      unread: false,
-      type: 'tenant'
-    }
-  ];
-
+  // CHANGED: Calculate unread count from API data
   const unreadCount = notifications.filter(n => n.unread).length;
 
   const getInitials = (email) => {
@@ -89,6 +150,32 @@ const Navbar = () => {
     return name.charAt(0).toUpperCase() + name.slice(1);
   };
 
+  // CHANGED: Format notification time
+  const formatNotificationTime = (timestamp) => {
+    if (!timestamp) return 'Unknown time';
+    
+    try {
+      const date = timestamp.seconds ? 
+        new Date(timestamp.seconds * 1000) : 
+        new Date(timestamp);
+      
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      
+      return date.toLocaleDateString();
+    } catch (error) {
+      return 'Unknown time';
+    }
+  };
+
   return (
     <motion.nav
       initial={{ y: -20, opacity: 0 }}
@@ -97,7 +184,7 @@ const Navbar = () => {
       className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm"
     >
       <div className="flex items-center justify-between">
-        {/* Left Side - Page Context (optional breadcrumbs could go here) */}
+        {/* Left Side - Page Context */}
         <div className="flex-1">
           <div className="text-sm text-gray-500">
             Welcome back, <span className="font-medium text-gray-900">{formatEmail(currentUser?.email)}</span>
@@ -111,7 +198,12 @@ const Navbar = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                if (!showNotifications && notifications.length === 0) {
+                  loadNotifications();
+                }
+              }}
               className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <Bell className="w-5 h-5" />
@@ -121,7 +213,7 @@ const Navbar = () => {
                   animate={{ scale: 1 }}
                   className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center"
                 >
-                  {unreadCount}
+                  {unreadCount > 9 ? '9+' : unreadCount}
                 </motion.span>
               )}
             </motion.button>
@@ -136,34 +228,57 @@ const Navbar = () => {
                   className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50"
                 >
                   <div className="p-4 border-b border-gray-100">
-                    <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
-                    <p className="text-sm text-gray-500">{unreadCount} unread notifications</p>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+                      {notificationsLoading && (
+                        <div className="w-4 h-4 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'All caught up!'}
+                    </p>
                   </div>
                   
                   <div className="max-h-80 overflow-y-auto">
-                    {notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${
-                          notification.unread ? 'bg-blue-50' : ''
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="text-sm font-medium text-gray-900">{notification.title}</h4>
-                            <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
-                            <p className="text-xs text-gray-500 mt-2">{notification.time}</p>
-                          </div>
-                          {notification.unread && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                          )}
-                        </div>
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <Bell className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm">No notifications yet</p>
                       </div>
-                    ))}
+                    ) : (
+                      notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          onClick={() => handleNotificationClick(notification)}
+                          className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${
+                            notification.unread ? 'bg-blue-50' : ''
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="text-sm font-medium text-gray-900">{notification.title}</h4>
+                              <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                              <p className="text-xs text-gray-500 mt-2">
+                                {formatNotificationTime(notification.createdAt || notification.time)}
+                              </p>
+                            </div>
+                            {notification.unread && (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                   
                   <div className="p-4 border-t border-gray-100">
-                    <button className="w-full text-center text-blue-600 hover:text-blue-700 text-sm font-medium">
+                    <button 
+                      onClick={() => {
+                        setShowNotifications(false);
+                        navigate('/notifications');
+                      }}
+                      className="w-full text-center text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    >
                       View all notifications
                     </button>
                   </div>

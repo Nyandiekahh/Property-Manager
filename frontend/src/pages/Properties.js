@@ -16,15 +16,12 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-// CHANGED: Import both original and enhanced services for compatibility
-import { propertyService } from '../services/firestoreService';
+// CHANGED: Import API services instead of direct Firestore
 import { 
-  enhancedPropertyService, 
-  enhancedTenantService,
-  enhancedUtils 
-} from '../services/enhancedFirestoreService';
+  enhancedPropertyAPI, 
+  enhancedTenantAPI 
+} from '../services/enhancedApiService';
 import { formatCurrency } from '../utils/helpers';
-// CHANGED: Import enhanced modal
 import EnhancedPropertyModal from '../components/property/EnhancedPropertyModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -37,52 +34,59 @@ const Properties = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [useEnhancedMode, setUseEnhancedMode] = useState(false);
+  const [useEnhancedMode, setUseEnhancedMode] = useState(true); // Default to enhanced mode
 
   useEffect(() => {
     loadProperties();
     loadTenants();
   }, [currentUser]);
 
+  // CHANGED: Use API instead of direct Firestore
   const loadProperties = async () => {
     if (!currentUser) return;
     
     try {
       setLoading(true);
-      // CHANGED: Load properties and check if any are enhanced
-      const data = await propertyService.getProperties(currentUser.uid);
-      setProperties(data);
+      const response = await enhancedPropertyAPI.getProperties(currentUser.uid);
       
-      // Check if any properties have enhanced features (unitTypes)
-      const hasEnhancedProperties = data.some(p => p.unitTypes && p.unitTypes.length > 0);
-      if (hasEnhancedProperties) {
-        setUseEnhancedMode(true);
+      if (response.success) {
+        setProperties(response.data || []);
+        
+        // Check if any properties have enhanced features (unitTypes)
+        const hasEnhancedProperties = (response.data || []).some(p => p.unitTypes && p.unitTypes.length > 0);
+        if (hasEnhancedProperties) {
+          setUseEnhancedMode(true);
+        }
+      } else {
+        throw new Error(response.error || 'Failed to load properties');
       }
     } catch (error) {
       console.error('Error loading properties:', error);
       toast.error('Failed to load properties');
+      // Set empty array on error to prevent crashes
+      setProperties([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // CHANGED: Use API instead of direct Firestore
   const loadTenants = async () => {
     if (!currentUser) return;
     
     try {
-      // CHANGED: Use enhanced service to get all tenants (works with old data too)
-      const tenantsData = await enhancedTenantService.getTenants(currentUser.uid);
-      setTenants(tenantsData);
+      const response = await enhancedTenantAPI.getTenants(currentUser.uid);
+      
+      if (response.success) {
+        setTenants(response.data || []);
+      } else {
+        console.error('Failed to load tenants:', response.error);
+        setTenants([]);
+      }
     } catch (error) {
       console.error('Error loading tenants:', error);
-      // Fallback to original service if enhanced fails
-      try {
-        const { getAllTenants } = await import('../services/firestoreService');
-        const fallbackData = await getAllTenants();
-        setTenants(fallbackData.filter(t => t.landlordId === currentUser.uid));
-      } catch (fallbackError) {
-        console.error('Fallback tenant loading failed:', fallbackError);
-      }
+      // Don't show error toast for tenants as it's secondary data
+      setTenants([]);
     }
   };
 
@@ -96,6 +100,7 @@ const Properties = () => {
     setShowModal(true);
   };
 
+  // CHANGED: Use API instead of direct Firestore
   const handleDeleteProperty = async (propertyId) => {
     const property = properties.find(p => p.id === propertyId);
     const hasOccupiedUnits = property && property.occupiedUnits > 0;
@@ -107,15 +112,14 @@ const Properties = () => {
 
     if (window.confirm('Are you sure you want to delete this property?')) {
       try {
-        // CHANGED: Use enhanced service if property has enhanced features
-        if (property && property.unitTypes) {
-          await enhancedPropertyService.deleteProperty(propertyId);
-        } else {
-          await propertyService.deleteProperty(propertyId);
-        }
+        const response = await enhancedPropertyAPI.deleteProperty(propertyId);
         
-        setProperties(properties.filter(p => p.id !== propertyId));
-        toast.success('Property deleted successfully');
+        if (response.success) {
+          setProperties(properties.filter(p => p.id !== propertyId));
+          toast.success('Property deleted successfully');
+        } else {
+          throw new Error(response.error || 'Failed to delete property');
+        }
       } catch (error) {
         console.error('Error deleting property:', error);
         toast.error(error.message || 'Failed to delete property');
@@ -123,39 +127,31 @@ const Properties = () => {
     }
   };
 
+  // CHANGED: Use API instead of direct Firestore
   const handleSaveProperty = async (propertyData) => {
     try {
       if (selectedProperty) {
-        // CHANGED: Use enhanced service if creating with unit types
-        if (propertyData.unitTypes) {
-          await enhancedPropertyService.updateProperty(selectedProperty.id, propertyData);
+        // Update existing property
+        const response = await enhancedPropertyAPI.updateProperty(selectedProperty.id, propertyData);
+        
+        if (response.success) {
           setUseEnhancedMode(true);
+          toast.success('Property updated successfully');
         } else {
-          await propertyService.updateProperty(selectedProperty.id, propertyData);
+          throw new Error(response.error || 'Failed to update property');
         }
-        toast.success('Property updated successfully');
       } else {
-        let newPropertyId;
-        // CHANGED: Use enhanced service if creating with unit types
-        if (propertyData.unitTypes && propertyData.unitTypes.length > 0) {
-          newPropertyId = await enhancedPropertyService.createProperty(propertyData, currentUser.uid);
+        // Create new property
+        const response = await enhancedPropertyAPI.createProperty(propertyData, currentUser.uid);
+        
+        if (response.success) {
           setUseEnhancedMode(true);
           toast.success('Enhanced property created with unit types!');
         } else {
-          // Convert to old format for backward compatibility
-          const oldFormatData = {
-            name: propertyData.name,
-            location: propertyData.location,
-            type: propertyData.type,
-            units: propertyData.units || 0,
-            rentPerUnit: propertyData.rentPerUnit || 0,
-            description: propertyData.description,
-            image: propertyData.image
-          };
-          newPropertyId = await propertyService.createProperty(oldFormatData, currentUser.uid);
-          toast.success('Property added successfully');
+          throw new Error(response.error || 'Failed to create property');
         }
       }
+      
       setShowModal(false);
       loadProperties(); // Reload to get updated data
     } catch (error) {
@@ -169,7 +165,7 @@ const Properties = () => {
     property.location?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // ENHANCED: Calculate stats with both old and new property formats
+  // Calculate stats with both old and new property formats
   const calculateStats = () => {
     let totalUnits = 0;
     let totalOccupied = 0;
@@ -351,7 +347,7 @@ const Properties = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredProperties.map((property, index) => {
-              // ENHANCED: Calculate stats for both old and new format
+              // Calculate stats for both old and new format
               const isEnhanced = property.unitTypes && property.unitTypes.length > 0;
               
               let displayUnits, displayOccupied, displayRevenue, displayOccupancyRate;
@@ -427,14 +423,14 @@ const Properties = () => {
                       </div>
                     </div>
 
-                    {/* ENHANCED: Show unit types for enhanced properties */}
+                    {/* Enhanced: Show unit types for enhanced properties */}
                     {isEnhanced && property.unitTypes && (
                       <div className="bg-gray-50 p-3 rounded-lg">
                         <p className="text-gray-600 text-xs font-medium mb-2">Unit Types:</p>
                         <div className="flex flex-wrap gap-1">
                           {property.unitTypes.map((unitType, idx) => (
                             <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                              {enhancedUtils.getUnitTypeDisplayName(unitType.type)}
+                              {unitType.type.charAt(0).toUpperCase() + unitType.type.slice(1)}
                             </span>
                           ))}
                         </div>
@@ -469,7 +465,7 @@ const Properties = () => {
                       </div>
                     </div>
 
-                    {/* ENHANCED: Additional info for enhanced properties */}
+                    {/* Enhanced: Additional info for enhanced properties */}
                     {isEnhanced && (
                       <div className="pt-3 border-t border-gray-100">
                         <div className="grid grid-cols-2 gap-4 text-sm">
@@ -492,7 +488,7 @@ const Properties = () => {
         )}
       </div>
 
-      {/* ENHANCED: Property Modal - will show enhanced modal for new properties */}
+      {/* Property Modal */}
       {showModal && (
         <EnhancedPropertyModal
           property={selectedProperty}

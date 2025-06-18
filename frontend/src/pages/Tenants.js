@@ -21,14 +21,12 @@ import {
   UserX
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-// CHANGED: Import enhanced services instead of original
+// CHANGED: Import API services instead of direct Firestore
 import { 
-  enhancedTenantService, 
-  enhancedPropertyService,
-  enhancedUtils 
-} from '../services/enhancedFirestoreService';
+  enhancedTenantAPI, 
+  enhancedPropertyAPI 
+} from '../services/enhancedApiService';
 import { formatCurrency, formatDate, getInitials } from '../utils/helpers';
-// CHANGED: Import enhanced modal instead of original
 import EnhancedTenantModal from '../components/tenant/EnhancedTenantModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -48,24 +46,48 @@ const Tenants = () => {
     loadData();
   }, [currentUser]);
 
+  // CHANGED: Use API instead of direct Firestore
   const loadData = async () => {
     if (!currentUser) return;
     
     try {
       setLoading(true);
-      // CHANGED: Use enhanced services
-      const [tenantsData, propertiesData, statsData] = await Promise.all([
-        enhancedTenantService.getTenants(currentUser.uid, { isActive: true }),
-        enhancedPropertyService.getProperties(currentUser.uid),
-        enhancedTenantService.getTenantStatistics(currentUser.uid)
+      
+      // Load data from API endpoints
+      const [tenantsResponse, propertiesResponse, statsResponse] = await Promise.all([
+        enhancedTenantAPI.getTenants(currentUser.uid, { isActive: true }),
+        enhancedPropertyAPI.getProperties(currentUser.uid),
+        enhancedTenantAPI.getTenantStatistics(currentUser.uid)
       ]);
       
-      setTenants(tenantsData);
-      setProperties(propertiesData);
-      setTenantStats(statsData);
+      if (tenantsResponse.success) {
+        setTenants(tenantsResponse.data || []);
+      } else {
+        console.error('Failed to load tenants:', tenantsResponse.error);
+        setTenants([]);
+      }
+      
+      if (propertiesResponse.success) {
+        setProperties(propertiesResponse.data || []);
+      } else {
+        console.error('Failed to load properties:', propertiesResponse.error);
+        setProperties([]);
+      }
+      
+      if (statsResponse.success) {
+        setTenantStats(statsResponse.data);
+      } else {
+        console.error('Failed to load tenant stats:', statsResponse.error);
+        setTenantStats(null);
+      }
+      
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Failed to load data');
+      // Set empty arrays to prevent crashes
+      setTenants([]);
+      setProperties([]);
+      setTenantStats(null);
     } finally {
       setLoading(false);
     }
@@ -81,7 +103,7 @@ const Tenants = () => {
     setShowModal(true);
   };
 
-  // ENHANCED: Move tenant out instead of just deleting
+  // CHANGED: Use API instead of direct Firestore
   const handleMoveTenantOut = async (tenant) => {
     const confirmed = window.confirm(
       `Are you sure you want to move out ${tenant.name} from unit ${tenant.unitNumber}? This will free up the unit for new tenants.`
@@ -89,9 +111,14 @@ const Tenants = () => {
     
     if (confirmed) {
       try {
-        await enhancedTenantService.moveTenantOut(tenant.id);
-        toast.success(`${tenant.name} has been moved out. Unit ${tenant.unitNumber} is now available.`);
-        loadData(); // Reload to reflect changes
+        const response = await enhancedTenantAPI.moveTenantOut(tenant.id);
+        
+        if (response.success) {
+          toast.success(`${tenant.name} has been moved out. Unit ${tenant.unitNumber} is now available.`);
+          loadData(); // Reload to reflect changes
+        } else {
+          throw new Error(response.error || 'Failed to move tenant out');
+        }
       } catch (error) {
         console.error('Error moving tenant out:', error);
         toast.error('Failed to move tenant out');
@@ -99,12 +126,18 @@ const Tenants = () => {
     }
   };
 
+  // CHANGED: Use API instead of direct Firestore
   const handleDeleteTenant = async (tenantId) => {
     if (window.confirm('Are you sure you want to permanently delete this tenant? This action cannot be undone.')) {
       try {
-        await enhancedTenantService.deleteTenant(tenantId);
-        toast.success('Tenant deleted successfully');
-        loadData(); // Reload to reflect changes
+        const response = await enhancedTenantAPI.deleteTenant(tenantId);
+        
+        if (response.success) {
+          toast.success('Tenant deleted successfully');
+          loadData(); // Reload to reflect changes
+        } else {
+          throw new Error(response.error || 'Failed to delete tenant');
+        }
       } catch (error) {
         console.error('Error deleting tenant:', error);
         toast.error('Failed to delete tenant');
@@ -112,19 +145,32 @@ const Tenants = () => {
     }
   };
 
+  // CHANGED: Use API instead of direct Firestore
   const handleSaveTenant = async (tenantData) => {
     try {
       if (selectedTenant) {
         // Update existing tenant
-        await enhancedTenantService.updateTenant(selectedTenant.id, tenantData);
-        toast.success('Tenant updated successfully');
+        const response = await enhancedTenantAPI.updateTenant(selectedTenant.id, tenantData);
+        
+        if (response.success) {
+          toast.success('Tenant updated successfully');
+        } else {
+          throw new Error(response.error || 'Failed to update tenant');
+        }
       } else {
-        // ENHANCED: Create new tenant with auto-assignment
-        const result = await enhancedTenantService.createTenant(tenantData, currentUser.uid);
-        toast.success(
-          `Tenant added successfully! Assigned to unit ${result.unitNumber} with account ${result.accountNumber}`
-        );
+        // Create new tenant with auto-assignment
+        const response = await enhancedTenantAPI.createTenant(tenantData, currentUser.uid);
+        
+        if (response.success) {
+          const result = response.data;
+          toast.success(
+            `Tenant added successfully! Assigned to unit ${result.unitNumber} with account ${result.accountNumber}`
+          );
+        } else {
+          throw new Error(response.error || 'Failed to create tenant');
+        }
       }
+      
       setShowModal(false);
       loadData(); // Reload to reflect changes
     } catch (error) {
@@ -166,7 +212,19 @@ const Tenants = () => {
     return property?.name || 'Unknown Property';
   };
 
-  // ENHANCED: Use stats from enhanced service
+  const getUnitTypeDisplayName = (unitType) => {
+    const displayNames = {
+      'bedsitter': 'Bedsitter',
+      '1bedroom': '1 Bedroom',
+      '2bedroom': '2 Bedroom',
+      '3bedroom': '3 Bedroom',
+      'studio': 'Studio',
+      'penthouse': 'Penthouse'
+    };
+    return displayNames[unitType] || unitType;
+  };
+
+  // Use stats from API or calculate from tenants
   const statusCounts = tenantStats ? {
     all: tenantStats.active,
     paid: tenantStats.paymentStatus?.paid || 0,
@@ -217,7 +275,7 @@ const Tenants = () => {
 
       {/* Main Content */}
       <div className="p-6 space-y-6">
-        {/* ENHANCED: Stats Overview with Unit Types */}
+        {/* Stats Overview with Unit Types */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           {[
             { label: 'Active Tenants', value: statusCounts.all, icon: Users, color: 'text-blue-600', bgColor: 'bg-blue-50' },
@@ -250,7 +308,7 @@ const Tenants = () => {
           })}
         </div>
 
-        {/* ENHANCED: Unit Type Distribution */}
+        {/* Unit Type Distribution */}
         {tenantStats?.unitTypes && Object.keys(tenantStats.unitTypes).length > 0 && (
           <div className="bg-white p-6 rounded-lg border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Unit Type Distribution</h3>
@@ -261,7 +319,7 @@ const Tenants = () => {
                     <Home className="w-4 h-4 text-blue-600" />
                   </div>
                   <p className="text-2xl font-bold text-gray-900">{count}</p>
-                  <p className="text-sm text-gray-600 capitalize">{enhancedUtils.getUnitTypeDisplayName(unitType)}</p>
+                  <p className="text-sm text-gray-600 capitalize">{getUnitTypeDisplayName(unitType)}</p>
                 </div>
               ))}
             </div>
@@ -323,7 +381,7 @@ const Tenants = () => {
                 transition={{ delay: index * 0.1 }}
                 className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
               >
-                {/* ENHANCED: Tenant Header with Unit Info */}
+                {/* Tenant Header with Unit Info */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -343,7 +401,7 @@ const Tenants = () => {
                       </p>
                       {tenant.unitType && (
                         <p className="text-blue-600 text-xs font-medium capitalize">
-                          {enhancedUtils.getUnitTypeDisplayName(tenant.unitType)}
+                          {getUnitTypeDisplayName(tenant.unitType)}
                         </p>
                       )}
                       {tenant.accountNumber && (
@@ -403,7 +461,7 @@ const Tenants = () => {
                   )}
                 </div>
 
-                {/* ENHANCED: Payment Info with Balance */}
+                {/* Payment Info with Balance */}
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-gray-600 text-sm">Monthly Rent</span>
@@ -464,7 +522,7 @@ const Tenants = () => {
         )}
       </div>
 
-      {/* ENHANCED: Modal */}
+      {/* Enhanced Modal */}
       {showModal && (
         <EnhancedTenantModal
           tenant={selectedTenant}
