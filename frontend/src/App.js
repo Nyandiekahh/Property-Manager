@@ -12,6 +12,8 @@ import Properties from './pages/Properties';
 import Tenants from './pages/Tenants';
 import PaymentHistory from './pages/PaymentHistory';
 import Analytics from './pages/Analytics';
+import Notifications from './pages/Notifications';
+
 
 // Components
 import Navbar from './components/common/Navbar';
@@ -139,6 +141,7 @@ function App() {
             <Route path="/tenants" element={<Navigate to="/dashboard/tenants" replace />} />
             <Route path="/payments" element={<Navigate to="/dashboard/payments" replace />} />
             <Route path="/analytics" element={<Navigate to="/dashboard/analytics" replace />} />
+            <Route path="/notifications" element={<Notifications />} />
             
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -338,15 +338,16 @@ const Navbar = () => {
                     </div>
                     
                     <div className="p-4 border-t border-gray-100">
-                      <button 
+                      <button
                         onClick={() => {
                           setShowNotifications(false);
                           navigate('/notifications');
                         }}
-                        className="w-full text-center text-blue-600 hover:text-blue-700 text-sm font-medium"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
                       >
                         View all notifications
                       </button>
+
                     </div>
                   </motion.div>
                 )}
