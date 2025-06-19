@@ -1,4 +1,4 @@
-// backend/controllers/enhancedTenantController.js - Enhanced with Email Integration
+// backend/controllers/enhancedTenantController.js - Enhanced with Email Integration and Debug Logging
 import EnhancedTenantService from '../services/enhancedTenantService.js';
 import EnhancedPropertyService from '../services/enhancedPropertyService.js';
 import enhancedEmailService from '../services/enhancedEmailService.js';
@@ -26,7 +26,7 @@ export const createTenant = async (req, res) => {
         .doc(landlordId)
         .get();
       
-      if (landlordDoc.exists()) {
+      if (landlordDoc.exists) {
         landlordData = landlordDoc.data();
       }
     } catch (error) {
@@ -34,9 +34,31 @@ export const createTenant = async (req, res) => {
     }
     
     // Send welcome email to tenant if email is provided
+    console.log('🔍 Email debug check:');
+    console.log('  tenant.email:', tenant.email);
+    console.log('  tenant.propertyId:', tenant.propertyId);
+    console.log('  landlordId:', landlordId);
+
+    // Debug property fetching
+    console.log('  property:', property ? `EXISTS (${property.name})` : 'NULL');
+    if (property) {
+      console.log('    property.name:', property.name);
+      console.log('    property.location:', property.location);
+      console.log('    property.paybill:', property.paybill);
+    }
+
+    // Debug landlord fetching
+    console.log('  landlordData:', landlordData ? `EXISTS (${landlordData.name || landlordData.displayName})` : 'NULL');
+    if (landlordData) {
+      console.log('    landlordData.name:', landlordData.name);
+      console.log('    landlordData.displayName:', landlordData.displayName);
+      console.log('    landlordData.phoneNumber:', landlordData.phoneNumber);
+    }
+
     if (tenant.email && property && landlordData) {
+      console.log('✅ All conditions met, sending email...');
       try {
-        await enhancedEmailService.sendTenantWelcomeEmail(
+        const emailResult = await enhancedEmailService.sendTenantWelcomeEmail(
           {
             name: tenant.name,
             email: tenant.email,
@@ -56,9 +78,22 @@ export const createTenant = async (req, res) => {
           }
         );
         console.log(`✅ Welcome email sent to tenant: ${tenant.email}`);
+        console.log(`📧 Message ID: ${emailResult.messageId}`);
       } catch (emailError) {
         console.error(`❌ Failed to send welcome email to tenant: ${tenant.email}`, emailError);
         // Don't fail the tenant creation if email fails
+      }
+    } else {
+      console.log('❌ Email conditions not met:');
+      console.log('  Has email:', !!tenant.email);
+      console.log('  Has property:', !!property);
+      console.log('  Has landlordData:', !!landlordData);
+      
+      if (!property) {
+        console.log('  🔍 Property issue - propertyId:', tenant.propertyId);
+      }
+      if (!landlordData) {
+        console.log('  🔍 Landlord issue - landlordId:', landlordId);
       }
     }
     
