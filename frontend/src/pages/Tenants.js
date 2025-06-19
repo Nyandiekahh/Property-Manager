@@ -41,6 +41,7 @@ const Tenants = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [tenantStats, setTenantStats] = useState(null);
+  const [selectedPropertyId, setSelectedPropertyId] = useState('all');
 
   useEffect(() => {
     loadData();
@@ -186,8 +187,9 @@ const Tenants = () => {
                          tenant.accountNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesFilter = filterStatus === 'all' || tenant.paymentStatus === filterStatus;
-    
-    return matchesSearch && matchesFilter;
+    const matchesProperty = selectedPropertyId === 'all' || tenant.propertyId === selectedPropertyId;
+
+    return matchesSearch && matchesFilter && matchesProperty;
   });
 
   const getStatusIcon = (status) => {
@@ -338,6 +340,19 @@ const Tenants = () => {
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
+          <select
+            value={selectedPropertyId}
+            onChange={(e) => setSelectedPropertyId(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+          <option value="all">All Buildings</option>
+            {properties.map(property => (
+              <option key={property.id} value={property.id}>
+                {property.name}
+              </option>
+))}
+          </select>
+
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}

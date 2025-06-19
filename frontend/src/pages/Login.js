@@ -496,7 +496,7 @@ const Login = () => {
                           type="text"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          className="input pl-12"
+                          className="input !pl-14 "
                           placeholder="Enter your full name"
                           disabled={isLoading}
                           autoComplete="name"
@@ -513,12 +513,12 @@ const Login = () => {
                     Email Address *
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
+                    <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 " />
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="input pl-12"
+                      className="input !pl-12 "
                       placeholder="Enter your email address"
                       disabled={isLoading}
                       autoComplete="email"
@@ -545,7 +545,7 @@ const Login = () => {
                           type="tel"
                           value={phoneNumber}
                           onChange={(e) => setPhoneNumber(e.target.value)}
-                          className="input pl-12"
+                          className="input !pl-12"
                           placeholder="+254712345678 or 0712345678"
                           disabled={isLoading}
                           autoComplete="tel"
@@ -570,7 +570,7 @@ const Login = () => {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => handlePasswordChange(e.target.value)}
-                      className="input pl-12 pr-12"
+                      className="input !pl-12 !pr-12"
                       placeholder="Enter your password"
                       disabled={isLoading}
                       autoComplete={isSignUp ? "new-password" : "current-password"}
@@ -654,7 +654,7 @@ const Login = () => {
                           type={showConfirmPassword ? 'text' : 'password'}
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
-                          className="input pl-12 pr-12"
+                          className="input !pl-12 !pr-12"
                           placeholder="Confirm your password"
                           disabled={isLoading}
                           autoComplete="new-password"
