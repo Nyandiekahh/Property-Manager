@@ -1,4 +1,4 @@
-// backend/routes/enhancedTenantRoutes.js
+// backend/routes/enhancedTenantRoutes.js - Enhanced with Email Endpoints
 import express from 'express';
 import { 
   createTenant,
@@ -10,7 +10,9 @@ import {
   deleteTenant,
   getTenantByAccountNumber,
   getTenantPaymentSummary,
-  getTenantStatistics
+  getTenantStatistics,
+  sendRentReminder,
+  sendBulkRentReminders
 } from '../controllers/enhancedTenantController.js';
 
 const router = express.Router();
@@ -30,5 +32,9 @@ router.post('/:tenantId/transfer', transferTenant);
 router.get('/account/:accountNumber', getTenantByAccountNumber);
 router.get('/:tenantId/payment-summary', getTenantPaymentSummary);
 router.get('/landlord/:landlordId/statistics', getTenantStatistics);
+
+// Email notification endpoints
+router.post('/:tenantId/send-reminder', sendRentReminder);
+router.post('/landlord/:landlordId/send-bulk-reminders', sendBulkRentReminders);
 
 export default router;

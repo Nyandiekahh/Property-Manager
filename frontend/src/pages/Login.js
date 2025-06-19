@@ -12,7 +12,11 @@ import {
   Shield,
   Smartphone,
   Users,
-  Loader2
+  Loader2,
+  User,
+  Phone,
+  Check,
+  X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -21,11 +25,20 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [passwordValidation, setPasswordValidation] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false
+  });
 
   const { login, signup, currentUser } = useAuth();
   const navigate = useNavigate();
@@ -38,6 +51,46 @@ const Login = () => {
       navigate(from, { replace: true });
     }
   }, [currentUser, navigate, location]);
+
+  // Password validation regex
+  const validatePassword = (password) => {
+    const validation = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /\d/.test(password),
+      special: /[@$!%*?&]/.test(password)
+    };
+    setPasswordValidation(validation);
+    return Object.values(validation).every(Boolean);
+  };
+
+  // Handle password change
+  const handlePasswordChange = (value) => {
+    setPassword(value);
+    if (isSignUp) {
+      validatePassword(value);
+    }
+  };
+
+  // Validate phone number (Kenyan format)
+  const validatePhoneNumber = (phone) => {
+    const phoneRegex = /^(\+254|254|0)?[17]\d{8}$/;
+    return phoneRegex.test(phone.replace(/\s/g, ''));
+  };
+
+  // Format phone number to international format
+  const formatPhoneNumber = (phone) => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('254')) {
+      return `+${cleaned}`;
+    } else if (cleaned.startsWith('0')) {
+      return `+254${cleaned.slice(1)}`;
+    } else if (cleaned.length === 9) {
+      return `+254${cleaned}`;
+    }
+    return phone;
+  };
 
   const validateForm = () => {
     if (!email.trim()) {
@@ -55,14 +108,36 @@ const Login = () => {
       return false;
     }
 
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters long');
-      return false;
-    }
+    if (isSignUp) {
+      if (!name.trim()) {
+        toast.error('Full name is required');
+        return false;
+      }
 
-    if (isSignUp && password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return false;
+      if (!phoneNumber.trim()) {
+        toast.error('Phone number is required');
+        return false;
+      }
+
+      if (!validatePhoneNumber(phoneNumber)) {
+        toast.error('Please enter a valid Kenyan phone number');
+        return false;
+      }
+
+      if (!validatePassword(password)) {
+        toast.error('Password does not meet security requirements');
+        return false;
+      }
+
+      if (password !== confirmPassword) {
+        toast.error('Passwords do not match');
+        return false;
+      }
+    } else {
+      if (password.length < 6) {
+        toast.error('Password must be at least 6 characters long');
+        return false;
+      }
     }
 
     return true;
@@ -77,11 +152,33 @@ const Login = () => {
 
     try {
       if (isSignUp) {
-        await signup(email, password);
-        toast.success('Account created successfully! Welcome to RentFlow!');
+        // Call backend signup endpoint with additional data
+        const response = await fetch(`${process.env.REACT_APP_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000'}/signup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            confirmPassword,
+            name,
+            phoneNumber: formatPhoneNumber(phoneNumber)
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          toast.success('Account created successfully! Welcome to RentFlow!');
+          // Auto-login after successful signup
+          await login(email, password);
+        } else {
+          throw new Error(data.error || 'Failed to create account');
+        }
       } else {
         await login(email, password);
-        toast.success(`Welcome back!`);
+        toast.success('Welcome back!');
       }
       
       // Navigate to dashboard or intended page
@@ -155,6 +252,15 @@ const Login = () => {
       transition: { duration: 0.6, ease: "easeOut" }
     }
   };
+
+  const getPasswordStrength = () => {
+    const validCount = Object.values(passwordValidation).filter(Boolean).length;
+    if (validCount <= 2) return { strength: 'weak', color: 'bg-red-500', width: '33%' };
+    if (validCount <= 4) return { strength: 'medium', color: 'bg-yellow-500', width: '66%' };
+    return { strength: 'strong', color: 'bg-green-500', width: '100%' };
+  };
+
+  const passwordStrength = getPasswordStrength();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -307,6 +413,35 @@ const Login = () => {
               transition={{ delay: 0.3 }}
             >
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Name Field (Sign Up Only) */}
+                <AnimatePresence>
+                  {isSignUp && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="form-group"
+                    >
+                      <label className="form-label">
+                        Full Name *
+                      </label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
+                        <input
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          className="input pl-12"
+                          placeholder="Enter your full name"
+                          disabled={isLoading}
+                          autoComplete="name"
+                          required
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Email Field */}
                 <div className="form-group">
                   <label className="form-label">
@@ -327,6 +462,38 @@ const Login = () => {
                   </div>
                 </div>
 
+                {/* Phone Number Field (Sign Up Only) */}
+                <AnimatePresence>
+                  {isSignUp && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="form-group"
+                    >
+                      <label className="form-label">
+                        Phone Number *
+                      </label>
+                      <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
+                        <input
+                          type="tel"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          className="input pl-12"
+                          placeholder="+254712345678 or 0712345678"
+                          disabled={isLoading}
+                          autoComplete="tel"
+                          required
+                        />
+                      </div>
+                      <p className="text-gray-500 text-sm mt-1">
+                        Enter your Kenyan phone number for M-Pesa integration
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Password Field */}
                 <div className="form-group">
                   <label className="form-label">
@@ -337,13 +504,13 @@ const Login = () => {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => handlePasswordChange(e.target.value)}
                       className="input pl-12 pr-12"
                       placeholder="Enter your password"
                       disabled={isLoading}
                       autoComplete={isSignUp ? "new-password" : "current-password"}
                       required
-                      minLength="6"
+                      minLength={isSignUp ? "8" : "6"}
                     />
                     <button
                       type="button"
@@ -354,6 +521,54 @@ const Login = () => {
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
+
+                  {/* Password Strength Indicator (Sign Up Only) */}
+                  {isSignUp && password && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="mt-2"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-600">Password strength:</span>
+                        <span className={`text-sm font-medium ${
+                          passwordStrength.strength === 'strong' ? 'text-green-600' :
+                          passwordStrength.strength === 'medium' ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {passwordStrength.strength}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.color}`}
+                          style={{ width: passwordStrength.width }}
+                        ></div>
+                      </div>
+                      
+                      <div className="mt-3 space-y-1">
+                        {[
+                          { key: 'length', text: 'At least 8 characters' },
+                          { key: 'uppercase', text: 'One uppercase letter' },
+                          { key: 'lowercase', text: 'One lowercase letter' },
+                          { key: 'number', text: 'One number' },
+                          { key: 'special', text: 'One special character (@$!%*?&)' }
+                        ].map(({ key, text }) => (
+                          <div key={key} className="flex items-center space-x-2">
+                            {passwordValidation[key] ? (
+                              <Check className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <X className="w-4 h-4 text-red-500" />
+                            )}
+                            <span className={`text-sm ${
+                              passwordValidation[key] ? 'text-green-600' : 'text-gray-600'
+                            }`}>
+                              {text}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
 
                 {/* Confirm Password Field (Sign Up Only) */}
@@ -389,6 +604,9 @@ const Login = () => {
                           {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
                       </div>
+                      {confirmPassword && password !== confirmPassword && (
+                        <p className="text-red-500 text-sm mt-1">Passwords do not match</p>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -451,6 +669,15 @@ const Login = () => {
                       setConfirmPassword('');
                       setPassword('');
                       setEmail('');
+                      setName('');
+                      setPhoneNumber('');
+                      setPasswordValidation({
+                        length: false,
+                        uppercase: false,
+                        lowercase: false,
+                        number: false,
+                        special: false
+                      });
                     }}
                     className="ml-2 text-blue-600 hover:text-blue-700 font-semibold transition-colors"
                     disabled={isLoading}
