@@ -16,7 +16,9 @@ import {
   User,
   Phone,
   Check,
-  X
+  X,
+  ArrowRight,
+  XCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -32,6 +34,13 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  
+  // Forgot Password Modal State
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
+  
   const [passwordValidation, setPasswordValidation] = useState({
     length: false,
     uppercase: false,
@@ -40,7 +49,7 @@ const Login = () => {
     special: false
   });
 
-  const { login, signup, currentUser } = useAuth();
+  const { login, signup, resetPassword, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -143,6 +152,7 @@ const Login = () => {
     return true;
   };
 
+  // Handle main form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -208,6 +218,61 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Handle forgot password submission
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    
+    if (!forgotPasswordEmail.trim()) {
+      toast.error('Please enter your email address');
+      return;
+    }
+    
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotPasswordEmail)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+
+    try {
+      const result = await resetPassword(forgotPasswordEmail);
+      
+      if (result.success) {
+        setForgotPasswordSent(true);
+        toast.success('Password reset instructions sent to your email!');
+      } else {
+        throw new Error(result.message || 'Failed to send reset email');
+      }
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      
+      let errorMessage = 'Failed to send reset email. Please try again.';
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email address.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  // Reset forgot password form
+  const resetForgotPasswordForm = () => {
+    setForgotPasswordEmail('');
+    setForgotPasswordSent(false);
+    setForgotPasswordLoading(false);
+  };
+
+  // Close forgot password modal
+  const closeForgotPasswordModal = () => {
+    setShowForgotPasswordModal(false);
+    resetForgotPasswordForm();
   };
 
   const features = [
@@ -626,6 +691,7 @@ const Login = () => {
                     </label>
                     <button 
                       type="button" 
+                      onClick={() => setShowForgotPasswordModal(true)}
                       className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
                       disabled={isLoading}
                     >
@@ -705,6 +771,136 @@ const Login = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {showForgotPasswordModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={closeForgotPasswordModal}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="bg-white max-w-md w-full rounded-2xl shadow-xl p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <Lock className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {forgotPasswordSent ? 'Check Your Email' : 'Reset Password'}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {forgotPasswordSent ? 'Instructions sent!' : 'Enter your email to reset'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={closeForgotPasswordModal}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  disabled={forgotPasswordLoading}
+                >
+                  <XCircle className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {forgotPasswordSent ? (
+                /* Success State */
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">Email Sent!</h4>
+                  <p className="text-gray-600 mb-6">
+                    We've sent password reset instructions to{' '}
+                    <span className="font-medium text-gray-900">{forgotPasswordEmail}</span>
+                  </p>
+                  <div className="space-y-3">
+                    <button
+                      onClick={closeForgotPasswordModal}
+                      className="w-full btn btn-primary"
+                    >
+                      Got it!
+                    </button>
+                    <button
+                      onClick={() => setForgotPasswordSent(false)}
+                      className="w-full btn btn-secondary"
+                    >
+                      Send to different email
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-4">
+                    Didn't receive the email? Check your spam folder or try again.
+                  </p>
+                </div>
+              ) : (
+                /* Form State */
+                <form onSubmit={handleForgotPassword}>
+                  <div className="mb-6">
+                    <p className="text-gray-600 mb-4">
+                      Enter your email address and we'll send you instructions to reset your password.
+                    </p>
+                    <label className="block text-gray-700 text-sm font-medium mb-2">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
+                      <input
+                        type="email"
+                        value={forgotPasswordEmail}
+                        onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter your email address"
+                        disabled={forgotPasswordLoading}
+                        autoComplete="email"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <button
+                      type="submit"
+                      disabled={forgotPasswordLoading}
+                      className="w-full btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {forgotPasswordLoading ? (
+                        <span className="flex items-center justify-center space-x-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Sending...</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center space-x-2">
+                          <span>Send Reset Instructions</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={closeForgotPasswordModal}
+                      className="w-full btn btn-secondary"
+                      disabled={forgotPasswordLoading}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -1,9 +1,10 @@
-// backend/server.js - Enhanced Server with Email Automation
+// backend/server.js - Enhanced Server with Email Automation and Forgot Password
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import axios from 'axios';
 import cron from 'node-cron';
+import crypto from 'crypto';
 import { collection, addDoc, setDoc, doc } from 'firebase/firestore';
 
 // Import routes
@@ -70,7 +71,8 @@ app.get('/', (req, res) => {
       'Automated email notifications',
       'Monthly rent reminders',
       'Payment confirmations',
-      'Overdue payment notices'
+      'Overdue payment notices',
+      'Password reset functionality'
     ],
     emailService: 'Active with Gmail SMTP',
     automation: 'Cron jobs configured'
@@ -253,6 +255,272 @@ app.post('/signin', async (req, res) => {
   }
 });
 
+// Forgot Password endpoint
+app.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is required'
+      });
+    }
+
+    // Check if user exists in Firestore Users collection
+    const usersRef = admin.firestore().collection('Users');
+    const userQuery = await usersRef.where('email', '==', email).get();
+    
+    if (userQuery.empty) {
+      return res.status(404).json({
+        success: false,
+        error: 'No account found with this email address'
+      });
+    }
+
+    const userData = userQuery.docs[0].data();
+    
+    // Generate password reset token (expires in 1 hour)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+    
+    // Store reset token in Firestore
+    await admin.firestore().collection('PasswordResets').doc(email).set({
+      email,
+      token: resetToken,
+      expiresAt: resetTokenExpiry,
+      createdAt: new Date(),
+      used: false
+    });
+
+    // Send password reset email
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}&email=${email}`;
+    
+    const emailResult = await enhancedEmailService.sendEmail({
+      to: email,
+      subject: 'Reset Your RentFlow Password',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Reset Your Password</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #3b82f6, #6366f1); color: white; padding: 30px 20px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #f8fafc; padding: 30px 20px; }
+                .button { display: inline-block; background: #3b82f6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+                .footer { background: #1f2937; color: #9ca3af; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; font-size: 14px; }
+                .warning { background: #fef3c7; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🔐 Reset Your Password</h1>
+                    <p>RentFlow Property Management</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Hello ${userData.name}!</h2>
+                    
+                    <p>We received a request to reset your password for your RentFlow account. If you didn't make this request, you can safely ignore this email.</p>
+                    
+                    <p>To reset your password, click the button below:</p>
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${resetUrl}" class="button">Reset Password</a>
+                    </div>
+                    
+                    <p>Or copy and paste this link into your browser:</p>
+                    <p style="word-break: break-all; background: #e5e7eb; padding: 10px; border-radius: 4px;">${resetUrl}</p>
+                    
+                    <div class="warning">
+                        <h3>⚠️ Important Security Information:</h3>
+                        <ul>
+                            <li>This link will expire in 1 hour</li>
+                            <li>The link can only be used once</li>
+                            <li>If you didn't request this reset, please contact support</li>
+                        </ul>
+                    </div>
+                    
+                    <p>For security reasons, this reset link will expire in 1 hour. If you need a new link, please visit the forgot password page again.</p>
+                </div>
+                
+                <div class="footer">
+                    <p>© 2024 RentFlow. This email was sent to ${email}</p>
+                    <p>If you're having trouble with the button above, copy and paste the URL into your web browser.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+      `
+    });
+
+    if (emailResult.success) {
+      console.log(`✅ Password reset email sent to ${email}`);
+      res.json({
+        success: true,
+        message: 'Password reset instructions have been sent to your email'
+      });
+    } else {
+      throw new Error('Failed to send reset email');
+    }
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process password reset request'
+    });
+  }
+});
+
+// Reset Password endpoint
+app.post('/reset-password', async (req, res) => {
+  try {
+    const { token, email, newPassword } = req.body;
+    
+    if (!token || !email || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Token, email, and new password are required'
+      });
+    }
+
+    // Validate password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character'
+      });
+    }
+
+    // Get reset token from Firestore
+    const resetDoc = await admin.firestore().collection('PasswordResets').doc(email).get();
+    
+    if (!resetDoc.exists) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired reset token'
+      });
+    }
+
+    const resetData = resetDoc.data();
+    
+    // Check if token matches
+    if (resetData.token !== token) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid reset token'
+      });
+    }
+
+    // Check if token is expired
+    if (new Date() > resetData.expiresAt.toDate()) {
+      await admin.firestore().collection('PasswordResets').doc(email).delete();
+      return res.status(400).json({
+        success: false,
+        error: 'Reset token has expired. Please request a new one.'
+      });
+    }
+
+    // Check if token has been used
+    if (resetData.used) {
+      return res.status(400).json({
+        success: false,
+        error: 'Reset token has already been used'
+      });
+    }
+
+    // Find user by email and update password
+    const userRecord = await admin.auth().getUserByEmail(email);
+    await admin.auth().updateUser(userRecord.uid, {
+      password: newPassword
+    });
+
+    // Mark token as used
+    await admin.firestore().collection('PasswordResets').doc(email).update({
+      used: true,
+      usedAt: new Date()
+    });
+
+    // Send confirmation email
+    const userData = await admin.firestore().collection('Users').doc(userRecord.uid).get();
+    const user = userData.data();
+
+    await enhancedEmailService.sendEmail({
+      to: email,
+      subject: 'Password Successfully Reset - RentFlow',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Password Reset Successful</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px 20px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #f0fdf4; padding: 30px 20px; }
+                .footer { background: #1f2937; color: #9ca3af; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; font-size: 14px; }
+                .success-box { background: #dcfce7; padding: 20px; border-radius: 8px; border-left: 4px solid #10b981; margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>✅ Password Reset Successful</h1>
+                    <p>RentFlow Property Management</p>
+                </div>
+                
+                <div class="content">
+                    <h2>Hello ${user?.name || 'User'}!</h2>
+                    
+                    <div class="success-box">
+                        <h3>🎉 Your password has been successfully reset!</h3>
+                        <p>You can now log in to your RentFlow account using your new password.</p>
+                    </div>
+                    
+                    <p>If you didn't make this change, please contact our support team immediately.</p>
+                    
+                    <p><strong>Next Steps:</strong></p>
+                    <ul>
+                        <li>Log in to your account with your new password</li>
+                        <li>Consider enabling two-factor authentication for added security</li>
+                        <li>Make sure to keep your password secure</li>
+                    </ul>
+                </div>
+                
+                <div class="footer">
+                    <p>© 2024 RentFlow. This email was sent to ${email}</p>
+                    <p>For security questions, please contact support@rentflow.co.ke</p>
+                </div>
+            </div>
+        </body>
+        </html>
+      `
+    });
+
+    console.log(`✅ Password reset successful for ${email}`);
+    res.json({
+      success: true,
+      message: 'Password has been reset successfully'
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reset password'
+    });
+  }
+});
+
 // Email testing endpoint
 app.post('/api/test-email', async (req, res) => {
   try {
@@ -317,7 +585,7 @@ app.post('/api/test-email', async (req, res) => {
   }
 });
 
-// CRON JOBS FOR AUTOMATED EMAIL NOTIFICATIONS
+// CRON JOBS FOR AUTOMATED EMAIL NOTIFICATIONS (keeping existing code...)
 
 // 1. Monthly rent reminders - 28th of each month at 8:00 AM
 cron.schedule('0 8 28 * *', async () => {
@@ -469,7 +737,6 @@ export const sendPaymentConfirmationHelper = async (tenantData, propertyData, pa
   }
 };
 
-
 // Global error handling middleware
 app.use((error, req, res, next) => {
   console.error('Server Error:', error);
@@ -497,7 +764,9 @@ app.use('*', (req, res) => {
       },
       authentication: {
         signup: 'POST /signup',
-        signin: 'POST /signin'
+        signin: 'POST /signin',
+        forgotPassword: 'POST /forgot-password',
+        resetPassword: 'POST /reset-password'
       },
       testing: {
         testEmail: 'POST /api/test-email'
@@ -523,6 +792,7 @@ app.listen(PORT, () => {
   console.log('   📅 Monthly rent reminders (28th of each month)');
   console.log('   ✅ Payment confirmation emails');
   console.log('   🚨 Overdue payment notices (5th of each month)');
+  console.log('   🔐 Password reset emails');
   console.log('\n🕐 Scheduled Jobs:');
   console.log('   📅 Monthly reminders: 28th at 8:00 AM');
   console.log('   🚨 Overdue notices: 5th at 9:00 AM');

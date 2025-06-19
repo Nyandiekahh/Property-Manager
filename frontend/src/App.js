@@ -6,6 +6,7 @@ import { useAuth } from './context/AuthContext';
 // Pages
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword'; // NEW IMPORT
 import Dashboard from './pages/Dashboard';
 import Properties from './pages/Properties';
 import Tenants from './pages/Tenants';
@@ -75,6 +76,10 @@ function App() {
             <Route 
               path="/login" 
               element={currentUser ? <Navigate to="/dashboard" replace /> : <Login />} 
+            />
+            <Route 
+              path="/reset-password" 
+              element={currentUser ? <Navigate to="/dashboard" replace /> : <ResetPassword />} 
             />
             
             {/* Protected Dashboard Routes */}
