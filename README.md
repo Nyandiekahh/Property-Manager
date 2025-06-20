@@ -182,37 +182,6 @@ cp .env.example .env
 
 4. **Configure environment variables in `.env`:**
 ```env
-# Firebase Configuration
-FIREBASE_API_KEY=AIzaSyCKnAn_NW45OZzJjMqtxUh3_myujY8CCZ8
-FIREBASE_AUTH_DOMAIN=rental-management-b8516.firebaseapp.com
-FIREBASE_PROJECT_ID=rental-management-b8516
-FIREBASE_STORAGE_BUCKET=rental-management-b8516.firebasestorage.app
-FIREBASE_MSG_SENDER_ID=508176792296
-FIREBASE_APP_ID=1:508176792296:web:ad7116af3327f9fe83a75d
-FIREBASE_MEASUREMENT_ID=G-G5ZCC3B8HW
-FIREBASE_DATABASE_URL=https://rental-management-b8516-default-rtdb.firebaseio.com/
-
-# M-Pesa Daraja API Configuration
-MPESA_CONSUMER_KEY=9wtXSuBe1ziuhkPGr53MhvOiA3YJseenHOGBWBQRRdvcyt4d
-MPESA_CONSUMER_SECRET=lCXDxf6VZ73GZtiizN2A0r9Bdep3PmeaqEdTIQ3arl9syAYCzBXHHX2aijmAOuOo
-MPESA_BUSINESS_SHORTCODE=174379
-MPESA_PASSKEY=bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
-MPESA_CALLBACK_URL=http://localhost:5000/api/payments/callback
-MPESA_TIMEOUT_URL=http://localhost:5000/api/payments/timeout
-
-# Server Configuration
-PORT=5000
-NODE_ENV=development
-
-# Security
-JWT_SECRET=7a2f5f3f0f444e3e9c9a648ebd92e0b0caa951be390b85d83c729b8e9ecfd48d
-
-# Email Configuration
-EMAIL_PASSWORD=zgmlwyitxspbklpp
-EMAIL_USER=danielatasha03@gmail.com
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-```
 
 5. **Add Firebase Admin SDK file:**
    - Place your Firebase Admin SDK JSON file in `backend/config/`
@@ -239,13 +208,7 @@ npm install
 
 3. **Create environment file in frontend root:**
 ```env
-REACT_APP_API_BASE_URL=http://localhost:5000/api
-REACT_APP_FIREBASE_API_KEY=AIzaSyCKnAn_NW45OZzJjMqtxUh3_myujY8CCZ8
-REACT_APP_FIREBASE_AUTH_DOMAIN=rental-management-b8516.firebaseapp.com
-REACT_APP_FIREBASE_PROJECT_ID=rental-management-b8516
-REACT_APP_FIREBASE_STORAGE_BUCKET=rental-management-b8516.firebasestorage.app
-REACT_APP_FIREBASE_MESSAGING_SENDER_ID=508176792296
-REACT_APP_FIREBASE_APP_ID=1:508176792296:web:ad7116af3327f9fe83a75d
+
 ```
 
 4. **Start the development server:**
