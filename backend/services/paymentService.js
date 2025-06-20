@@ -57,59 +57,53 @@ export class SmartPaymentService {
   }
 
   // Analyze payment amount vs expected rent
-  analyzePayment(paidAmount, expectedRent, tenant) {
-    const currentBalance = parseFloat(tenant.accountBalance || 0);
-    const effectivePayment = paidAmount + currentBalance;
-    
-    let analysis = {
-      paidAmount,
-      expectedRent,
-      currentBalance,
-      effectivePayment,
-      type: 'exact',
-      overpayment: 0,
-      shortfall: 0,
-      carryForward: 0,
-      newBalance: 0,
-      status: 'paid'
-    };
+analyzePayment(paidAmount, expectedRent, tenant) {
+  const currentBalance = parseFloat(tenant.accountBalance || 0);
 
-    if (effectivePayment > expectedRent) {
-      // OVERPAYMENT - Carry forward to next month
-      analysis.type = 'overpayment';
-      analysis.overpayment = effectivePayment - expectedRent;
-      analysis.carryForward = analysis.overpayment;
-      analysis.newBalance = analysis.overpayment;
-      analysis.status = 'paid';
-      
-    } else if (effectivePayment < expectedRent) {
-      // UNDERPAYMENT - Partial payment
-      analysis.type = 'underpayment';
-      analysis.shortfall = expectedRent - effectivePayment;
-      analysis.newBalance = -analysis.shortfall; // Negative balance = debt
-      analysis.status = 'partial';
-      
-    } else {
-      // EXACT PAYMENT
-      analysis.type = 'exact';
-      analysis.newBalance = 0;
-      analysis.status = 'paid';
-    }
+  const newBalance = currentBalance + paidAmount;
 
-    return analysis;
+  const analysis = {
+    paidAmount,
+    expectedRent,
+    currentBalance,
+    type: 'exact',
+    overpayment: 0,
+    shortfall: 0,
+    carryForward: 0,
+    newBalance,
+    status: 'pending'
+  };
+
+  if (newBalance > 0) {
+    analysis.type = 'overpayment';
+    analysis.overpayment = newBalance;
+    analysis.carryForward = newBalance;
+    analysis.status = 'paid';
+  } else if (newBalance < 0) {
+    analysis.type = 'underpayment';
+    analysis.shortfall = Math.abs(newBalance);
+    analysis.status = 'partial';
+  } else {
+    analysis.type = 'exact';
+    analysis.status = 'paid';
   }
 
-  // Update tenant with smart payment status
-  async updateTenantPaymentStatus(tenant, analysis) {
-    const tenantRef = doc(db, 'tenants', tenant.id);
-    
-    const updateData = {
-      paymentStatus: analysis.status,
-      lastPaymentDate: new Date(),
-      accountBalance: analysis.newBalance,
-      lastPaymentAmount: analysis.paidAmount,
-      updatedAt: new Date()
-    };
+  return analysis;
+}
+
+
+
+// Update tenant with smart payment status
+async updateTenantPaymentStatus(tenant, analysis) {
+  const tenantRef = doc(db, 'tenants', tenant.id);
+
+  const updateData = {
+    paymentStatus: analysis.status,
+    lastPaymentDate: new Date(),
+    accountBalance: analysis.newBalance,
+    lastPaymentAmount: analysis.paidAmount,
+    updatedAt: new Date()
+  };
 
     // Add payment history to tenant record
     const paymentHistory = tenant.paymentHistory || [];
@@ -272,6 +266,61 @@ export class SmartPaymentService {
     
     return reminders;
   }
+
+  async billMonthlyRentForAllTenants() {
+  const tenantsSnapshot = await getDocs(collection(db, 'tenants'));
+  const now = new Date();
+  const billedMonth = now.toISOString().substr(0, 7); // "YYYY-MM"
+
+  for (const docSnap of tenantsSnapshot.docs) {
+    const tenant = { id: docSnap.id, ...docSnap.data() };
+
+    const rent = parseFloat(tenant.rentAmount || 0);
+    const prevBalance = parseFloat(tenant.accountBalance || 0);
+
+    const newBalance = prevBalance - rent;
+
+    const updateData = {
+      accountBalance: newBalance,
+      paymentStatus: 'pending',
+      updatedAt: now,
+    };
+
+    // Update balance and status
+    const tenantRef = doc(db, 'tenants', tenant.id);
+    await updateDoc(tenantRef, updateData);
+
+    // Append to payment history
+    const paymentHistory = tenant.paymentHistory || [];
+    paymentHistory.push({
+      date: now,
+      amount: -rent,
+      type: 'monthly billing',
+      balance: newBalance,
+      month: billedMonth,
+    });
+
+    await updateDoc(tenantRef, {
+      paymentHistory: paymentHistory.slice(-12),
+    });
+
+    // Optional: add a reminder notification
+    await addDoc(collection(db, 'notifications'), {
+      tenantId: tenant.id,
+      landlordId: tenant.landlordId,
+      title: 'Rent Due This Month',
+      message: `KES ${rent.toLocaleString()} rent has been billed for ${billedMonth}.`,
+      type: 'reminder',
+      priority: 'high',
+      read: false,
+      createdAt: now
+    });
+  }
+
+  return { success: true, message: 'Monthly rent billed to all tenants.' };
 }
 
-export default new SmartPaymentService();
+}
+
+const smartPaymentService = new SmartPaymentService();
+export default smartPaymentService;

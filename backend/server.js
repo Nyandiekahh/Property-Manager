@@ -15,6 +15,8 @@ import reminderRoutes from './routes/reminderRoutes.js';
 import enhancedPropertyRoutes from './routes/enhancedPropertyRoutes.js';
 import enhancedTenantRoutes from './routes/enhancedTenantRoutes.js';
 import enhancedPaymentRoutes from './routes/enhancedPaymentRoutes.js';
+import smartPaymentService from './services/paymentService.js'; // ✅ make sure path is correct
+
 
 // Import services
 import enhancedEmailService from './services/enhancedEmailService.js';
@@ -585,7 +587,20 @@ app.post('/api/test-email', async (req, res) => {
   }
 });
 
-// CRON JOBS FOR AUTOMATED EMAIL NOTIFICATIONS (keeping existing code...)
+
+cron.schedule('0 0 1 * *', async () => {
+  console.log('🕛 Running monthly billing...');
+  try {
+    const result = await SmartPaymentService.billMonthlyRentForAllTenants();
+    console.log('✅ Billing Result:', result.message);
+  } catch (err) {
+    console.error('❌ Monthly billing error:', err.message);
+  }
+}, {
+  timezone: 'Africa/Nairobi'
+});
+
+
 
 // 1. Monthly rent reminders - 28th of each month at 8:00 AM
 cron.schedule('0 8 28 * *', async () => {

@@ -426,28 +426,32 @@ const Tenants = () => {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <button
-                      onClick={() => handleEditTenant(tenant)}
-                      className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleMoveTenantOut(tenant)}
-                      className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                      title="Move Out"
-                    >
-                      <UserX className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteTenant(tenant.id)}
-                      className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Delete Permanently"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <div className="flex items-center gap-1 flex-wrap">
+  <button
+    onClick={() => handleEditTenant(tenant)}
+    className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+    title="Edit Tenant"
+  >
+    <Edit className="w-4 h-4" />
+  </button>
+
+  <button
+    onClick={() => handleMoveTenantOut(tenant)}
+    className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+    title="Move Out"
+  >
+    <UserX className="w-4 h-4" />
+  </button>
+
+  <button
+    onClick={() => handleDeleteTenant(tenant.id)}
+    className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+    title="Delete Permanently"
+  >
+    <Trash2 className="w-4 h-4" />
+  </button>
+</div>
+
                 </div>
 
                 {/* Contact Info */}
@@ -521,7 +525,7 @@ const Tenants = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="mt-4 flex space-x-2">
+                {/* <div className="mt-4 flex space-x-2">
                   <button className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
                     <Mail className="w-4 h-4" />
                     <span>Reminder</span>
@@ -530,7 +534,7 @@ const Tenants = () => {
                     <CreditCard className="w-4 h-4" />
                     <span>History</span>
                   </button>
-                </div>
+                </div> */}
               </motion.div>
             ))}
           </div>

@@ -6,7 +6,7 @@ import NotificationCenter from '../components/notifications/NotificationCenter';
 
 const Notifications = () => {
   const navigate = useNavigate();
-  const [showNotificationCenter, setShowNotificationCenter] = useState(true);
+  const [showNotificationCenter] = useState(true);
 
   const handleNotificationClick = (notification) => {
     // Handle navigation based on notification type
