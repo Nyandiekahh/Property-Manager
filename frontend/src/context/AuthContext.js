@@ -1,13 +1,6 @@
-// frontend/src/context/AuthContext.js - Enhanced with Forgot Password
+// frontend/src/context/AuthContext.js - Django Backend Auth Context
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signOut, 
-  onAuthStateChanged,
-  sendPasswordResetEmail 
-} from 'firebase/auth';
-import { auth } from '../services/firebase';
+import authService from '../services/authService';
 
 const AuthContext = createContext();
 
@@ -23,85 +16,78 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const signup = (email, password) => {
-    return createUserWithEmailAndPassword(auth, email, password);
-  };
-
-  const login = (email, password) => {
-    return signInWithEmailAndPassword(auth, email, password);
-  };
-
-  const logout = () => {
-    return signOut(auth);
-  };
-
-  // Enhanced password reset with backend integration
-  const resetPassword = async (email) => {
-    try {
-      // Use our backend forgot password endpoint for better email templates
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000'}/forgot-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        return { success: true, message: data.message };
-      } else {
-        throw new Error(data.error || 'Failed to send reset email');
-      }
-    } catch (error) {
-      console.error('Password reset error:', error);
-      // Fallback to Firebase reset if backend fails
+  useEffect(() => {
+    // Check if user is already logged in
+    const initAuth = async () => {
       try {
-        await sendPasswordResetEmail(auth, email);
-        return { success: true, message: 'Password reset email sent successfully' };
-      } catch (firebaseError) {
-        throw firebaseError;
+        if (authService.isAuthenticated()) {
+          const user = authService.getCurrentUser();
+          setCurrentUser(user);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
+        setLoading(false);
       }
+    };
+
+    initAuth();
+  }, []);
+
+  const signup = async (email, password, name, phoneNumber) => {
+    try {
+      const response = await authService.signup({
+        email,
+        password,
+        name,
+        phone_number: phoneNumber
+      });
+      
+      setCurrentUser(response.user);
+      return response;
+    } catch (error) {
+      throw error;
     }
   };
 
-  // Reset password with token (for the reset password page)
+  const login = async (email, password) => {
+    try {
+      const response = await authService.login(email, password);
+      setCurrentUser(response.user);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await authService.logout();
+      setCurrentUser(null);
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const resetPassword = async (email) => {
+    try {
+      const result = await authService.requestPasswordReset(email);
+      return { success: true, message: result.message || 'Password reset email sent' };
+    } catch (error) {
+      console.error('Password reset error:', error);
+      throw error;
+    }
+  };
+
   const resetPasswordWithToken = async (token, email, newPassword) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000'}/reset-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token,
-          email,
-          newPassword
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        return { success: true, message: data.message };
-      } else {
-        throw new Error(data.error || 'Failed to reset password');
-      }
+      const result = await authService.resetPasswordWithToken(token, email, newPassword);
+      return { success: true, message: result.message || 'Password reset successful' };
     } catch (error) {
       console.error('Reset password error:', error);
       throw error;
     }
   };
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
 
   const value = {
     currentUser,

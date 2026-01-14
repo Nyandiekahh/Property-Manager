@@ -6,7 +6,11 @@ import { useAuth } from './context/AuthContext';
 // Pages
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
+import SignUp from './pages/SignUp';
+import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword'; // NEW IMPORT
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import Dashboard from './pages/Dashboard';
 import Properties from './pages/Properties';
 import Tenants from './pages/Tenants';
@@ -80,8 +84,24 @@ function App() {
               element={currentUser ? <Navigate to="/dashboard" replace /> : <Login />} 
             />
             <Route 
+              path="/signup" 
+              element={currentUser ? <Navigate to="/dashboard" replace /> : <SignUp />} 
+            />
+            <Route 
+              path="/forgot-password" 
+              element={currentUser ? <Navigate to="/dashboard" replace /> : <ForgotPassword />} 
+            />
+            <Route 
               path="/reset-password" 
               element={currentUser ? <Navigate to="/dashboard" replace /> : <ResetPassword />} 
+            />
+            <Route 
+              path="/terms-of-service" 
+              element={<TermsOfService />} 
+            />
+            <Route 
+              path="/privacy-policy" 
+              element={<PrivacyPolicy />} 
             />
             
             {/* Protected Dashboard Routes */}
